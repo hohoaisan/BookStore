@@ -10,8 +10,9 @@ import 'react-toastify/dist/ReactToastify.min.css';
 import { Provider as ReduxProvider } from 'react-redux';
 import store from 'stores/store';
 
-import Home from './pages/Home';
-import Dashboard from './pages/Dashboard';
+import Home from 'pages/Home';
+import Dashboard from 'pages/Dashboard';
+import Login from 'pages/Auth/Login';
 
 const routes = [
   {
@@ -22,6 +23,13 @@ const routes = [
   {
     path: '/',
     Component: Home,
+    options: {
+      exact: true,
+    },
+  },
+  {
+    path: '/auth/login',
+    Component: Login,
     options: {
       exact: true,
     },
