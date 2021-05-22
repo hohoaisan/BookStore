@@ -9,16 +9,21 @@ import 'react-toastify/dist/ReactToastify.min.css';
 
 import { Provider as ReduxProvider } from 'react-redux';
 import store from 'stores/store';
+import Axios, { initAxiosInterceptors } from 'apis/instance';
 
 import Home from 'pages/Home';
 import Dashboard from 'pages/Dashboard';
 import Login from 'pages/Auth/Login';
+import ProtectedRoute from 'routes/ProtectedRoute';
+// Axios.defaults.headers.common["Authorization"] = `Bearer ${store.getState().auth.token}`;
+initAxiosInterceptors(store);
 
 const routes = [
   {
     path: '/dashboard',
     // options: {},
     Component: Dashboard,
+    isProtected: true,
   },
   {
     path: '/',
@@ -35,6 +40,7 @@ const routes = [
     },
   },
 ];
+
 function App() {
   const theme = React.useMemo(
     () =>
@@ -54,11 +60,17 @@ function App() {
           <CssBaseline />
           <Router>
             <Switch>
-              {routes.map(({ path, Component, options }, index) => (
-                <Route path={path} {...options} key={index}>
-                  <Component />
-                </Route>
-              ))}
+              {routes.map(({ path, Component, options, isProtected }, index) =>
+                isProtected ? (
+                  <ProtectedRoute path={path} {...options} key={index}>
+                    <Component />
+                  </ProtectedRoute>
+                ) : (
+                  <Route path={path} {...options} key={index}>
+                    <Component />
+                  </Route>
+                ),
+              )}
             </Switch>
           </Router>
         </div>

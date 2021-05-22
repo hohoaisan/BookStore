@@ -6,8 +6,10 @@ import authReducer from 'reducers/auth';
 const reducer = combineReducers({
   auth: authReducer,
 });
-export default configureStore({
+const store = configureStore({
   reducer,
 });
 
 export type RootState = ReturnType<typeof reducer>;
+
+export default store

@@ -2,8 +2,13 @@ import { Dispatch } from 'redux';
 import { createSlice } from '@reduxjs/toolkit';
 import axios, { AxiosRequestConfig } from 'axios';
 import { toast } from 'react-toastify';
+import Axios from 'apis/instance';
+import Login from 'apis/login';
 
-const initialState = {
+const initialState: {
+  user: object | null;
+  token: string | null;
+} = {
   user: null,
   token: null,
 };
@@ -19,37 +24,26 @@ export const AuthSlice = createSlice({
       state.user = null;
       state.token = null;
     },
+    loginFailed: (state) => {
+      state.user = null;
+      state.token = null;
+    },
   },
 });
 
-export const { loginSuccess, logout } = AuthSlice.actions;
+export const { loginSuccess, logout, loginFailed } = AuthSlice.actions;
 
 export const login =
   ({ username, password }: { username: string; password: string }) =>
   async (dispatch: Dispatch) => {
-    const apiBaseUrl = 'https://localhost:5001';
-
-    let data = JSON.stringify({ username, password });
-
-    let config: AxiosRequestConfig = {
-      method: 'post',
-      url: `${apiBaseUrl}/api/Auth/login`,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      data,
-      timeout: 20000,
-    };
-    await axios(config)
+    Login({ username, password })
       .then((res) => {
         dispatch(loginSuccess(res.data));
         toast.success('LOGIN SUCCESS');
       })
       .catch((err) => {
-        console.log(err);
-        console.log(err.message);
-        toast.error('LOGIN ERROR');
+        dispatch(loginFailed());
+        toast.error('LOGIN FAILED');
       });
   };
 
