@@ -25,5 +25,13 @@ export const getAuthor = (id: string) => {
   };
   return Axios(config);
 };
+export const createAuthor = ({ name, description }: { name: string; description: string }) => {
+  let config: AxiosRequestConfig = {
+    method: 'post',
+    url: `/api/Authors`,
+    data: { name, description },
+  };
+  return Axios(config);
+};
 
 // export default getAuthors;
