@@ -30,78 +30,73 @@ import parseQueries from 'helpers/parseQueries';
 import rows from './rows';
 // import detail from './detail';
 
+import { RootState } from 'stores/store';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  setQueryState,
+  setDataGridRow,
+  fetchAuthors,
+  setDataGridSelectedRow,
+  setOpenModal,
+  setModalMode,
+} from 'reducers/dashboard/authors';
+
 export default function Authors(props: any) {
-  const [queryState, setQueryState] = useState<{
-    selectedTab: string;
-    currentPage: number;
-    rowsPerPage: number;
-    searchInput: string | undefined;
-  }>({
-    selectedTab: 'default',
-    currentPage: 1,
-    rowsPerPage: 10,
-    searchInput: undefined,
-  });
-  const { selectedTab, currentPage, rowsPerPage, searchInput } = queryState;
-  const [searchInputValue, setSearchInputValue] = useState<string | undefined>('');
-  const [dataGridRows, setDataGridRows] = useState<any[]>(rows);
+  const { query, rows, rowCount, selectedRow, openModal } = useSelector((state: RootState) => state.dashboardAuthor);
+  const { filter, page, limit, search } = query;
+  const dispatch = useDispatch();
+  const [searchValue, setsearchValue] = useState<string | undefined>('');
   const [openActionMenu, setOpenActionMenu] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState<null | HTMLElement>(null);
-  const [seletedRowValue, setSelectedRowValue] = useState<GridRowData | null>(null);
+  // const [seletedRowValue, setSelectedRowValue] = useState<GridRowData | null>(null);
 
-  const [openAuthorModal, setOpenAuthorModal] = useState<{
-    open: boolean;
-    mode: 'edit' | 'view' | 'new';
-  }>({
-    open: false,
-    mode: 'new',
-  });
   const classes = useStyles();
   const history = useHistory();
   const location = useLocation();
   const dataGridRef = useRef<HTMLDivElement>(null);
   const getQueries = useCallback(() => {
     return parseQueries(location.search, {
-      filter: selectedTab,
+      filter: filter,
       search: undefined,
-      page: currentPage,
-      limit: rowsPerPage,
+      page: page,
+      limit: limit,
     });
   }, [location.search]);
   useEffect(function () {
     console.log('DID mount');
     const { filter, page, limit, search } = getQueries();
-    setSearchInputValue(search);
-    setQueryState({
-      selectedTab: filter,
-      currentPage: page,
-      rowsPerPage: limit,
-      searchInput: search,
-    });
-    console.log('Fetch data go br br', page, limit);
+    setsearchValue(search);
+    dispatch(setQueryState({ filter, page, limit, search }));
+    dispatch(fetchAuthors());
   }, []);
   useNonInitialEffect(() => {
     history.push({
       search: qs.stringify({
-        filter: selectedTab,
-        page: currentPage,
-        limit: rowsPerPage,
-        search: searchInput,
+        filter: filter,
+        page: 1,
+        limit: 10,
+        search: search,
       }),
     });
-  }, [selectedTab, currentPage, rowsPerPage, searchInput]);
+  }, [filter]);
+
+  useNonInitialEffect(() => {
+    history.push({
+      search: qs.stringify({
+        filter: filter,
+        page: page,
+        limit: limit,
+        search: search,
+      }),
+    });
+  }, [page, limit, search]);
 
   useNonInitialEffect(() => {
     console.log('history changed');
     const { filter, page, limit, search } = getQueries();
-    setSearchInputValue(search);
-    setQueryState({
-      selectedTab: filter,
-      currentPage: page,
-      rowsPerPage: limit,
-      searchInput: search,
-    });
-    console.log('Fetch data go br br', currentPage, rowsPerPage);
+    setsearchValue(search);
+    dispatch(setQueryState({ filter, page, limit, search }));
+    dispatch(fetchAuthors());
   }, [location.search]);
   const actionMenuItems: {
     title: string;
@@ -115,20 +110,16 @@ export default function Authors(props: any) {
         title: 'Xem thông tin chi tiết',
         onClick: () => {
           setOpenActionMenu(false);
-          setOpenAuthorModal({
-            open: true,
-            mode: 'view',
-          });
+          dispatch(setModalMode('view'));
+          dispatch(setOpenModal(true));
         },
       },
       {
         title: 'Chỉnh sửa thông tin',
         onClick: () => {
           setOpenActionMenu(false);
-          setOpenAuthorModal({
-            open: true,
-            mode: 'edit',
-          });
+          dispatch(setModalMode('edit'));
+          dispatch(setOpenModal(true));
         },
       },
       {
@@ -156,7 +147,7 @@ export default function Authors(props: any) {
               color="inherit"
               aria-label="open action"
               onClick={(event: React.MouseEvent) => {
-                setSelectedRowValue(params.row);
+                dispatch(setDataGridSelectedRow(params.row));
                 setActionMenuAnchor(params.element as HTMLElement);
                 setOpenActionMenu(true);
               }}
@@ -174,20 +165,24 @@ export default function Authors(props: any) {
       label: 'Mặc định',
       value: 'default',
       onClick: () => {
-        setQueryState({
-          ...queryState,
-          selectedTab: 'default',
-        });
+        dispatch(
+          setQueryState({
+            ...query,
+            filter: 'default',
+          }),
+        );
       },
     },
     {
       label: 'Bị xoá (ẩn)',
       value: 'deleted',
       onClick: () => {
-        setQueryState({
-          ...queryState,
-          selectedTab: 'deleted',
-        });
+        dispatch(
+          setQueryState({
+            ...query,
+            filter: 'deleted',
+          }),
+        );
       },
     },
   ];
@@ -209,19 +204,22 @@ export default function Authors(props: any) {
               </Typography>
             </Grid>
             <Grid item xs="auto">
-              <IconButton edge="start" color="inherit" aria-label="refresh page" onClick={() => console.log('refresh')}>
+              <IconButton
+                onClick={() => dispatch(fetchAuthors())}
+                edge="start"
+                color="inherit"
+                aria-label="refresh page"
+              >
                 <ReplayIcon />
               </IconButton>
               <Button
                 variant="contained"
                 color="primary"
                 endIcon={<Icon>add</Icon>}
-                onClick={() =>
-                  setOpenAuthorModal({
-                    open: true,
-                    mode: 'new',
-                  })
-                }
+                onClick={() => {
+                  dispatch(setModalMode('new'));
+                  dispatch(setOpenModal(true));
+                }}
               >
                 Thêm mới
               </Button>
@@ -232,7 +230,7 @@ export default function Authors(props: any) {
           <Grid item xs={12}>
             <Grid container spacing={1} alignItems="center">
               <Grid item xs={12} sm={true}>
-                <Tabs value={selectedTab} indicatorColor="primary" textColor="primary">
+                <Tabs value={filter} indicatorColor="primary" textColor="primary">
                   {tabs.map(({ label, value, onClick }, index) => (
                     <Tab key={index} label={label} value={value} onClick={onClick} />
                   ))}
@@ -242,17 +240,19 @@ export default function Authors(props: any) {
                 <div className={classes.search}>
                   <InputBase
                     placeholder="Search…"
-                    value={searchInputValue}
+                    value={searchValue}
                     onKeyUp={(event: React.KeyboardEvent) => {
                       if (event.key === 'Enter') {
-                        setQueryState({
-                          ...queryState,
-                          searchInput: searchInputValue,
-                        });
+                        dispatch(
+                          setQueryState({
+                            ...query,
+                            search: searchValue,
+                          }),
+                        );
                       }
                     }}
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                      setSearchInputValue(event.target.value);
+                      setsearchValue(event.target.value);
                     }}
                     classes={{
                       root: classes.inputRoot,
@@ -267,10 +267,12 @@ export default function Authors(props: any) {
                       color="inherit"
                       aria-label="refresh page"
                       onClick={() =>
-                        setQueryState({
-                          ...queryState,
-                          searchInput: searchInputValue,
-                        })
+                        dispatch(
+                          setQueryState({
+                            ...query,
+                            search: searchValue,
+                          }),
+                        )
                       }
                     >
                       <SearchIcon />
@@ -281,29 +283,33 @@ export default function Authors(props: any) {
             </Grid>
           </Grid>
           <Grid item xs={12}>
-            {!!dataGridRows.length && (
+            {!!rows.length && (
               <Paper elevation={1} style={{ padding: 10 }}>
                 <div style={{ flex: 1 }}>
                   <DataGrid
-                    rowCount={100}
+                    rowCount={rowCount}
                     paginationMode="server"
                     ref={dataGridRef}
                     autoHeight
-                    rows={dataGridRows}
+                    rows={rows}
                     columns={cols}
-                    page={currentPage - 1}
-                    pageSize={rowsPerPage}
+                    page={page - 1}
+                    pageSize={limit}
                     onPageChange={(param: GridPageChangeParams) => {
-                      setQueryState({
-                        ...queryState,
-                        currentPage: param.page + 1,
-                      });
+                      dispatch(
+                        setQueryState({
+                          ...query,
+                          page: param.page + 1,
+                        }),
+                      );
                     }}
                     onPageSizeChange={(param: GridPageChangeParams) => {
-                      setQueryState({
-                        ...queryState,
-                        rowsPerPage: param.pageSize,
-                      });
+                      dispatch(
+                        setQueryState({
+                          ...query,
+                          limit: param.pageSize,
+                        }),
+                      );
                     }}
                     rowsPerPageOptions={[5, 10, 20]}
                     pagination
@@ -315,13 +321,13 @@ export default function Authors(props: any) {
                     open={openActionMenu}
                     onClose={() => setOpenActionMenu(false)}
                   >
-                    {seletedRowValue &&
+                    {selectedRow &&
                       actionMenuItems &&
                       actionMenuItems.map(({ title, onClick, matches }, index) =>
                         !matches ||
                         (!!matches &&
                           Object.keys(matches)
-                            .map((key: any) => matches[key] === seletedRowValue[key])
+                            .map((key: any) => matches[key] === selectedRow[key])
                             .every((value) => !!value)) ? (
                           <MenuItem key={index} onClick={onClick}>
                             {title}
@@ -329,14 +335,7 @@ export default function Authors(props: any) {
                         ) : null,
                       )}
                   </Menu>
-                  {openAuthorModal && (
-                    <AuthorModal
-                      mode={openAuthorModal.mode}
-                      open={openAuthorModal.open}
-                      setMode={setOpenAuthorModal}
-                      item={seletedRowValue}
-                    ></AuthorModal>
-                  )}
+                  {openModal && <AuthorModal></AuthorModal>}
                 </div>
               </Paper>
             )}
