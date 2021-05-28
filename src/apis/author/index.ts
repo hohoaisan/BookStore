@@ -34,4 +34,37 @@ export const createAuthor = ({ name, description }: { name: string; description:
   return Axios(config);
 };
 
+export const editAuthor = ({ id, name, description }: { id: string; name?: string; description?: string }) => {
+  let config: AxiosRequestConfig = {
+    method: 'put',
+    url: `/api/Authors/${id}`,
+    data: { id, name, description },
+  };
+  return Axios(config);
+};
+
+export const disableAuthor = (id: string) => {
+  let config: AxiosRequestConfig = {
+    method: 'put',
+    url: `/api/Authors/${id}`,
+    data: { id, deleted: true },
+  };
+  return Axios(config);
+};
+export const enableAuthor = (id: string) => {
+  let config: AxiosRequestConfig = {
+    method: 'put',
+    url: `/api/Authors/${id}`,
+    data: { id, deleted: false },
+  };
+  return Axios(config);
+};
+export const deleteAuthor = (id: string) => {
+  let config: AxiosRequestConfig = {
+    method: 'delete',
+    url: `/api/Authors/${id}`,
+  };
+  return Axios(config);
+};
+
 // export default getAuthors;

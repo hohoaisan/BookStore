@@ -1,10 +1,18 @@
-import { Dispatch, AnyAction } from 'redux';
+import { Dispatch, AnyAction, ActionCreator } from 'redux';
 import { createSlice } from '@reduxjs/toolkit';
 
 import store from 'stores/store';
 import axios, { AxiosRequestConfig } from 'axios';
 import { toast } from 'react-toastify';
-import { getAuthors, getAuthor, createAuthor as crtAuthor } from 'apis/author';
+import {
+  getAuthors,
+  getAuthor,
+  createAuthor,
+  editAuthor,
+  disableAuthor,
+  enableAuthor,
+  deleteAuthor,
+} from 'apis/author';
 
 interface queryType {
   filter: 'default' | 'deleted';
@@ -40,12 +48,15 @@ export const AuthorSlice = createSlice({
   reducers: {
     setQueryState: (state, action) => {
       const { filter, page, limit, search } = action.payload;
-      state.query = { filter, page, limit, search };
+      state.query = { filter, page: Number.parseInt(page), limit: Number.parseInt(limit), search };
     },
     setDataGridRow: (state, action) => {
       const { rowCount, rows } = action.payload;
-      state.rowCount = rowCount;
+      state.rowCount = Number.parseInt(rowCount);
       state.rows = rows;
+      if (state.query.limit * state.query.page > state.rowCount) {
+        state.query.page = Math.ceil(state.rowCount / state.query.limit) || 1;
+      }
     },
     setModalItemData: (state, action) => {
       state.modalData = action.payload;
@@ -65,7 +76,7 @@ export const AuthorSlice = createSlice({
 export const { setQueryState, setDataGridRow, setModalItemData, setDataGridSelectedRow, setOpenModal, setModalMode } =
   AuthorSlice.actions;
 
-export const fetchAuthors = () => async (dispatch: Dispatch, getState: typeof store.getState) => {
+export const FETCH_AUTHORS = () => async (dispatch: Dispatch, getState: typeof store.getState) => {
   const query = getState().dashboardAuthor.query;
   getAuthors(query)
     .then((res) => {
@@ -81,7 +92,7 @@ export const fetchAuthors = () => async (dispatch: Dispatch, getState: typeof st
     });
 };
 
-export const fetchAuthor = () => async (dispatch: Dispatch, getState: typeof store.getState) => {
+export const FETCH_AUTHOR = () => async (dispatch: Dispatch, getState: typeof store.getState) => {
   const authorId = getState().dashboardAuthor.selectedRow.id;
   authorId &&
     getAuthor(authorId)
@@ -93,16 +104,16 @@ export const fetchAuthor = () => async (dispatch: Dispatch, getState: typeof sto
       });
 };
 
-export const createAuthor =
+export const CREATE_AUTHOR =
   ({ name, description }: { name: string; description: string }) =>
-  async (dispatch: Dispatch, getState: typeof store.getState) => {
+  async (dispatch: Dispatch<any>, getState: typeof store.getState) => {
     // dispatch({ type: 'REQUEST_CREATE_NEW_AUTHOR' });
-    crtAuthor({ name, description })
+    createAuthor({ name, description })
       .then((res) => {
         toast.success('Đã thêm tác giả mới');
         dispatch(setOpenModal(false));
         dispatch(setModalMode('new'));
-        // dispatch(fetchAuthors());
+        dispatch(FETCH_AUTHORS());
         // dispatch({ type: 'SUCCESS_CREATE_NEW_AUTHOR' });
       })
       .catch((err) => {
@@ -111,4 +122,63 @@ export const createAuthor =
         // dispatch({ type: 'FAILED_CREATE_NEW_AUTHOR' });
       });
   };
+
+export const EDIT_AUTHOR =
+  ({ id, name, description }: { id: string; name?: string; description?: string }) =>
+  async (dispatch: Dispatch<any>, getState: typeof store.getState) => {
+    editAuthor({ id, name, description })
+      .then((res) => {
+        toast.success('Đã sửa thông tin tác giả');
+        dispatch(FETCH_AUTHORS());
+      })
+      .catch((err) => {
+        console.log(err);
+        toast.error('Có vấn đề khi sửa tác giả này');
+        // dispatch({ type: 'FAILED_CREATE_NEW_AUTHOR' });
+      });
+  };
+
+export const DISABLE_AUTHOR = () => async (dispatch: Dispatch<any>, getState: typeof store.getState) => {
+  const authorId = getState().dashboardAuthor.selectedRow.id;
+  authorId &&
+    disableAuthor(authorId)
+      .then((res) => {
+        toast.success('Đã xoá (ẩn) tác giả, xem tác giả này ở tab ĐÃ XOÁ');
+        dispatch(FETCH_AUTHORS());
+      })
+      .catch((err) => {
+        console.log(err);
+        toast.error('Có vấn đề khi sửa tác giả này');
+        // dispatch({ type: 'FAILED_CREATE_NEW_AUTHOR' });
+      });
+};
+export const ENABLE_AUTHOR = () => async (dispatch: Dispatch<any>, getState: typeof store.getState) => {
+  const authorId = getState().dashboardAuthor.selectedRow.id;
+  authorId &&
+    enableAuthor(authorId)
+      .then((res) => {
+        toast.success('Đã bỏ xoá tác giả, xem tác giả này ở tab mặc định');
+        dispatch(FETCH_AUTHORS());
+      })
+      .catch((err) => {
+        console.log(err);
+        toast.error('Có vấn đề khi sửa tác giả này');
+        // dispatch({ type: 'FAILED_CREATE_NEW_AUTHOR' });
+      });
+};
+
+export const REMOVE_AUTHOR = () => async (dispatch: Dispatch<any>, getState: typeof store.getState) => {
+  const authorId = getState().dashboardAuthor.selectedRow.id;
+  authorId &&
+    deleteAuthor(authorId)
+      .then((res) => {
+        toast.success('Đã xoá vĩnh viễn tác giả');
+        dispatch(FETCH_AUTHORS());
+      })
+      .catch((err) => {
+        console.log(err);
+        toast.error('Có vấn đề khi thực hiện xoá');
+        // dispatch({ type: 'FAILED_CREATE_NEW_AUTHOR' });
+      });
+};
 export default AuthorSlice.reducer;
