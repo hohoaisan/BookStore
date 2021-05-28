@@ -2,11 +2,11 @@ import { configureStore } from '@reduxjs/toolkit';
 import { combineReducers } from 'redux';
 
 import authReducer from 'reducers/auth';
-import authorsReducer from 'reducers/dashboard/authors';
+import dashboardReducer from 'reducers/dashboard/dashboard';
 
 const reducer = combineReducers({
   auth: authReducer,
-  dashboardAuthor: authorsReducer
+  dashboard: dashboardReducer
 });
 const store = configureStore({
   reducer,

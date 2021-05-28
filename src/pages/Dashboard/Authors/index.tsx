@@ -35,17 +35,14 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   setQueryState,
   setDataGridRow,
-  FETCH_AUTHORS,
   setDataGridSelectedRow,
   setOpenModal,
   setModalMode,
-  DISABLE_AUTHOR,
-  ENABLE_AUTHOR,
-  REMOVE_AUTHOR,
-} from 'reducers/dashboard/authors';
+} from 'reducers/dashboard/dashboard';
+import { FETCH_AUTHORS, DISABLE_AUTHOR, ENABLE_AUTHOR, REMOVE_AUTHOR } from 'reducers/dashboard/authors';
 
 export default function Authors(props: any) {
-  const { query, rows, rowCount, selectedRow, openModal } = useSelector((state: RootState) => state.dashboardAuthor);
+  const { query, rows, rowCount, selectedRow, openModal } = useSelector((state: RootState) => state.dashboard);
   const { filter, page, limit, search } = query;
   const dispatch = useDispatch();
   const [searchValue, setsearchValue] = useState<string | undefined>('');
@@ -101,6 +98,16 @@ export default function Authors(props: any) {
     dispatch(setQueryState({ filter, page, limit, search }));
     dispatch(FETCH_AUTHORS());
   }, [location.search]);
+
+  const changeQueryState = (item: object) => {
+    dispatch(
+      setQueryState({
+        ...query,
+        ...item,
+      }),
+    );
+  };
+
   const actionMenuItems: {
     title: string;
     onClick: () => void;
@@ -191,28 +198,21 @@ export default function Authors(props: any) {
     {
       label: 'Mặc định',
       value: 'default',
-      onClick: () => {
-        dispatch(
-          setQueryState({
-            ...query,
-            filter: 'default',
-          }),
-        );
-      },
+      onClick: () =>
+        changeQueryState({
+          filter: 'default',
+        }),
     },
     {
       label: 'Bị xoá (ẩn)',
       value: 'deleted',
-      onClick: () => {
-        dispatch(
-          setQueryState({
-            ...query,
-            filter: 'deleted',
-          }),
-        );
-      },
+      onClick: () =>
+        changeQueryState({
+          filter: 'deleted',
+        }),
     },
   ];
+
   return (
     <Paper elevation={0} className={classes.content}>
       <Container maxWidth="lg">
@@ -270,12 +270,9 @@ export default function Authors(props: any) {
                     value={searchValue}
                     onKeyUp={(event: React.KeyboardEvent) => {
                       if (event.key === 'Enter') {
-                        dispatch(
-                          setQueryState({
-                            ...query,
-                            search: searchValue,
-                          }),
-                        );
+                        changeQueryState({
+                          search: searchValue,
+                        });
                       }
                     }}
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
@@ -294,12 +291,9 @@ export default function Authors(props: any) {
                       color="inherit"
                       aria-label="refresh page"
                       onClick={() =>
-                        dispatch(
-                          setQueryState({
-                            ...query,
-                            search: searchValue,
-                          }),
-                        )
+                        changeQueryState({
+                          search: searchValue,
+                        })
                       }
                     >
                       <SearchIcon />
@@ -322,22 +316,16 @@ export default function Authors(props: any) {
                     columns={cols}
                     page={page - 1}
                     pageSize={limit}
-                    onPageChange={(param: GridPageChangeParams) => {
-                      dispatch(
-                        setQueryState({
-                          ...query,
-                          page: param.page + 1,
-                        }),
-                      );
-                    }}
-                    onPageSizeChange={(param: GridPageChangeParams) => {
-                      dispatch(
-                        setQueryState({
-                          ...query,
-                          limit: param.pageSize,
-                        }),
-                      );
-                    }}
+                    onPageChange={(param: GridPageChangeParams) =>
+                      changeQueryState({
+                        page: param.page + 1,
+                      })
+                    }
+                    onPageSizeChange={(param: GridPageChangeParams) =>
+                      changeQueryState({
+                        limit: param.pageSize,
+                      })
+                    }
                     rowsPerPageOptions={[5, 10, 20]}
                     pagination
                   />

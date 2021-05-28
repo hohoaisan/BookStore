@@ -29,14 +29,11 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   setQueryState,
   setDataGridRow,
-  FETCH_AUTHORS,
   setDataGridSelectedRow,
   setOpenModal,
   setModalMode,
-  FETCH_AUTHOR,
-  CREATE_AUTHOR,
-  EDIT_AUTHOR,
-} from 'reducers/dashboard/authors';
+} from 'reducers/dashboard/dashboard';
+import { FETCH_AUTHORS, FETCH_AUTHOR, CREATE_AUTHOR, EDIT_AUTHOR } from 'reducers/dashboard/authors';
 
 const initValue = {
   id: '',
@@ -45,7 +42,7 @@ const initValue = {
 };
 function CustomModal() {
   const dispatch = useDispatch();
-  const { modalData, openModal, modalMode } = useSelector((state: RootState) => state.dashboardAuthor);
+  const { modalData, openModal, modalMode } = useSelector((state: RootState) => state.dashboard);
   const { title, onFormSubmit } = React.useMemo(() => {
     switch (modalMode) {
       case 'edit':
@@ -53,7 +50,6 @@ function CustomModal() {
           title: 'Chỉnh sửa tác giả',
           onFormSubmit: (values: any) => {
             const { id, name, description } = values;
-            alert(JSON.stringify({ id, name, description }));
             dispatch(EDIT_AUTHOR({ id, name, description }));
           },
         };

@@ -1,12 +1,12 @@
 import axios, { AxiosRequestConfig } from 'axios';
 import Axios from 'apis/instance';
-export const getAuthors = ({
+export const getAll = ({
   filter,
   page,
   limit,
   search,
 }: {
-  filter?: 'default' | 'deleted';
+  filter?: string;
   page?: number;
   limit?: number;
   search?: null | string;
@@ -18,14 +18,14 @@ export const getAuthors = ({
   };
   return Axios(config);
 };
-export const getAuthor = (id: string) => {
+export const get = (id: string) => {
   let config: AxiosRequestConfig = {
     method: 'get',
     url: `/api/Authors/${id}`,
   };
   return Axios(config);
 };
-export const createAuthor = ({ name, description }: { name: string; description: string }) => {
+export const create = ({ name, description }: { name: string; description: string }) => {
   let config: AxiosRequestConfig = {
     method: 'post',
     url: `/api/Authors`,
@@ -34,7 +34,7 @@ export const createAuthor = ({ name, description }: { name: string; description:
   return Axios(config);
 };
 
-export const editAuthor = ({ id, name, description }: { id: string; name?: string; description?: string }) => {
+export const edit = ({ id, name, description }: { id: string; name?: string; description?: string }) => {
   let config: AxiosRequestConfig = {
     method: 'put',
     url: `/api/Authors/${id}`,
@@ -43,7 +43,7 @@ export const editAuthor = ({ id, name, description }: { id: string; name?: strin
   return Axios(config);
 };
 
-export const disableAuthor = (id: string) => {
+export const disable = (id: string) => {
   let config: AxiosRequestConfig = {
     method: 'put',
     url: `/api/Authors/${id}`,
@@ -51,7 +51,7 @@ export const disableAuthor = (id: string) => {
   };
   return Axios(config);
 };
-export const enableAuthor = (id: string) => {
+export const enable = (id: string) => {
   let config: AxiosRequestConfig = {
     method: 'put',
     url: `/api/Authors/${id}`,
@@ -59,7 +59,7 @@ export const enableAuthor = (id: string) => {
   };
   return Axios(config);
 };
-export const deleteAuthor = (id: string) => {
+export const remove = (id: string) => {
   let config: AxiosRequestConfig = {
     method: 'delete',
     url: `/api/Authors/${id}`,
