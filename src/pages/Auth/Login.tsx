@@ -6,7 +6,7 @@ import * as yup from 'yup';
 import { RootState } from 'stores/store';
 import { useSelector, useDispatch } from 'react-redux';
 import { login, logout } from 'reducers/auth';
-
+import { Link } from 'react-router-dom';
 import {
   useMediaQuery,
   AppBar,
@@ -27,15 +27,18 @@ import {
 const Login = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
+  const validationSchema = yup.object({
+    username: yup.string().trim().max(16).min(4).required('Hãy nhập tên người dùng'),
+    password: yup.string().trim().max(50).min(4).required('Hãy nhập mật khẩu'),
+  });
   const formik = useFormik({
     initialValues: {
       username: '',
       password: '',
     },
-    // validationSchema: validationSchema,
+    validationSchema: validationSchema,
     onSubmit: (values, { resetForm }) => {
       dispatch(login(values));
-      resetForm();
     },
   });
 
@@ -53,6 +56,7 @@ const Login = () => {
               <>
                 <Grid item xs={12}>
                   <Typography align="center">Bạn đã đăng nhập, bạn có muốn đăng xuất?</Typography>
+                  <Link to="/dashboard">go to dashboard</Link>
                 </Grid>
                 <Grid item xs={12}>
                   <Button color="primary" variant="contained" fullWidth size="large" onClick={() => dispatch(logout())}>
@@ -69,6 +73,8 @@ const Login = () => {
                     label="Tên người dùng"
                     value={formik.values.username}
                     onChange={formik.handleChange}
+                    error={formik.touched.username && Boolean(formik.errors.username)}
+                    helperText={formik.touched.username && formik.errors.username}
                     variant="outlined"
                     fullWidth
                   />
@@ -80,6 +86,8 @@ const Login = () => {
                     label="Mật khẩu"
                     value={formik.values.password}
                     onChange={formik.handleChange}
+                    error={formik.touched.password && Boolean(formik.errors.password)}
+                    helperText={formik.touched.password && formik.errors.password}
                     variant="outlined"
                     fullWidth
                   />

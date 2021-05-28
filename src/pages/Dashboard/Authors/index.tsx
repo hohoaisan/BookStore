@@ -35,10 +35,13 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   setQueryState,
   setDataGridRow,
-  fetchAuthors,
+  FETCH_AUTHORS,
   setDataGridSelectedRow,
   setOpenModal,
   setModalMode,
+  DISABLE_AUTHOR,
+  ENABLE_AUTHOR,
+  REMOVE_AUTHOR,
 } from 'reducers/dashboard/authors';
 
 export default function Authors(props: any) {
@@ -67,7 +70,7 @@ export default function Authors(props: any) {
     const { filter, page, limit, search } = getQueries();
     setsearchValue(search);
     dispatch(setQueryState({ filter, page, limit, search }));
-    dispatch(fetchAuthors());
+    dispatch(FETCH_AUTHORS());
   }, []);
   useNonInitialEffect(() => {
     history.push({
@@ -96,7 +99,7 @@ export default function Authors(props: any) {
     const { filter, page, limit, search } = getQueries();
     setsearchValue(search);
     dispatch(setQueryState({ filter, page, limit, search }));
-    dispatch(fetchAuthors());
+    dispatch(FETCH_AUTHORS());
   }, [location.search]);
   const actionMenuItems: {
     title: string;
@@ -125,7 +128,31 @@ export default function Authors(props: any) {
       {
         title: 'Xoá tác giả',
         onClick: () => {
-          console.log('delete author');
+          dispatch(DISABLE_AUTHOR());
+          setOpenActionMenu(false);
+        },
+        matches: {
+          deleted: false,
+        },
+      },
+      {
+        title: 'Bỏ xoá tác giả',
+        onClick: () => {
+          dispatch(ENABLE_AUTHOR());
+          setOpenActionMenu(false);
+        },
+        matches: {
+          deleted: true,
+        },
+      },
+      {
+        title: 'Xoá vĩnh viễn tác giả',
+        onClick: () => {
+          dispatch(REMOVE_AUTHOR());
+          setOpenActionMenu(false);
+        },
+        matches: {
+          deleted: true,
         },
       },
     ],
@@ -205,7 +232,7 @@ export default function Authors(props: any) {
             </Grid>
             <Grid item xs="auto">
               <IconButton
-                onClick={() => dispatch(fetchAuthors())}
+                onClick={() => dispatch(FETCH_AUTHORS())}
                 edge="start"
                 color="inherit"
                 aria-label="refresh page"

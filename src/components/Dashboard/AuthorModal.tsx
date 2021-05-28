@@ -29,12 +29,13 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   setQueryState,
   setDataGridRow,
-  fetchAuthors,
+  FETCH_AUTHORS,
   setDataGridSelectedRow,
   setOpenModal,
   setModalMode,
-  fetchAuthor,
-  createAuthor,
+  FETCH_AUTHOR,
+  CREATE_AUTHOR,
+  EDIT_AUTHOR,
 } from 'reducers/dashboard/authors';
 
 const initValue = {
@@ -50,7 +51,11 @@ function CustomModal() {
       case 'edit':
         return {
           title: 'Chỉnh sửa tác giả',
-          onFormSubmit: (values: any) => alert('xửa' + JSON.stringify(values)),
+          onFormSubmit: (values: any) => {
+            const { id, name, description } = values;
+            alert(JSON.stringify({ id, name, description }));
+            dispatch(EDIT_AUTHOR({ id, name, description }));
+          },
         };
       case 'view':
         return {
@@ -63,7 +68,7 @@ function CustomModal() {
           title: 'Thêm tác giả mới',
           onFormSubmit: (values: any, helpers: FormikHelpers<typeof initValue>) => {
             const { name, description } = values;
-            dispatch(createAuthor({ name, description }));
+            dispatch(CREATE_AUTHOR({ name, description }));
           },
         };
     }
@@ -86,7 +91,7 @@ function CustomModal() {
     switch (modalMode) {
       case 'edit':
       case 'view':
-        dispatch(fetchAuthor());
+        dispatch(FETCH_AUTHOR());
         break;
       case 'new':
       default:
