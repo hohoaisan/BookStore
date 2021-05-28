@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useFormik } from 'formik';
+import { useFormik, FormikHelpers } from 'formik';
 import * as yup from 'yup';
 import {
   Typography,
@@ -24,26 +24,33 @@ import {
 } from '@material-ui/core';
 import { DataGrid, GridCellParams, GridRowData, GridPageChangeParams } from '@material-ui/data-grid';
 
-function CustomModal({
-  open,
-  setMode,
-  mode,
-  item,
-}: {
-  open: boolean;
-  setMode: React.Dispatch<
-    React.SetStateAction<{
-      open: boolean;
-      mode: 'edit' | 'view' | 'new';
-    }>
-  >;
-  mode: 'edit' | 'view' | 'new';
-  item?: GridRowData | null;
-}) {
-  const [modalMode, setModalMode] = useState(mode);
-  useEffect(() => {
-    setModalMode(mode);
-  }, [mode]);
+import { RootState } from 'stores/store';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  setQueryState,
+  setDataGridRow,
+  setDataGridSelectedRow,
+  setOpenModal,
+  setModalMode,
+} from 'reducers/dashboard/dashboard';
+import {
+  FETCH_CATEGORIES,
+  DISABLE_CATEGORY,
+  ENABLE_CATEGORY,
+  REMOVE_CATEGORY,
+  EDIT_CATEGORY,
+  CREATE_CATEGORY,
+  FETCH_CATEGORY,
+} from 'reducers/dashboard/categories';
+
+const initValue = {
+  id: '',
+  name: '',
+};
+
+function CustomModal() {
+  const dispatch = useDispatch();
+  const { modalData, openModal, modalMode } = useSelector((state: RootState) => state.dashboard);
   // const validationSchema = yup.object({
   //   username: yup.string().trim().max(25).min(8).required('Hãy nhập tên người dùng'),
   //   fullname: yup.string().trim().max(50).min(2).required('Hãy nhập họ tên'),
@@ -55,35 +62,66 @@ function CustomModal({
   //     .integer('Hãy nhập số hợp lệ'),
   //   email: yup.string().email('Hãy nhập email hợp lệ').required('Phải nhập email'),
   // });
-  const formik = useFormik({
-    initialValues: {
-      id: '',
-      name: '',
-      description: '',
-    },
-    // validationSchema: validationSchema,
-    onSubmit: (values) => {
-      alert(JSON.stringify(values, null, 2));
-    },
-  });
-  const title = React.useMemo(() => {
+  const { title, onFormSubmit } = React.useMemo(() => {
     switch (modalMode) {
       case 'edit':
-        return 'Chỉnh sửa danh mục';
+        return {
+          title: 'Chỉnh sửa danh mục',
+          onFormSubmit: (values: any) => {
+            const { id, name } = values;
+            dispatch(EDIT_CATEGORY({ id, name }));
+          },
+        };
+      case 'view':
+        return {
+          title: 'Xem thông tin danh mục',
+          onFormSubmit: (values: any) => {},
+        };
       case 'new':
       default:
-        return 'Thêm danh mục mới';
+        return {
+          title: 'Thêm danh mục mới',
+          onFormSubmit: (values: any, helpers: FormikHelpers<typeof initValue>) => {
+            const { name } = values;
+            dispatch(CREATE_CATEGORY({ name }));
+          },
+        };
     }
   }, [modalMode]);
+
+  const formik = useFormik({
+    initialValues: initValue,
+    // validationSchema: validationSchema,
+    onSubmit: onFormSubmit,
+  });
+
+  const modalCloseHandler = () => {
+    dispatch(setOpenModal(false));
+    dispatch(setModalMode('new'));
+  };
+  useEffect(() => {
+    if (modalData && (modalMode === 'view' || modalMode === 'edit')) {
+      const { id, name } = modalData;
+      formik.setValues({ id, name });
+    }
+  }, [modalData]);
+
+  useEffect(() => {
+    switch (modalMode) {
+      case 'edit':
+      case 'view':
+        dispatch(FETCH_CATEGORY());
+        break;
+      case 'new':
+      default:
+        formik.setValues(initValue);
+    }
+  }, [modalMode]);
+  
   return (
     <Dialog
-      open={open}
-      onClose={() =>
-        setMode({
-          open: false,
-          mode: modalMode,
-        })
-      }
+      open={openModal}
+      onClose={modalCloseHandler}
       aria-labelledby="form-dialog-title"
       maxWidth="sm"
       fullWidth={true}
@@ -98,26 +136,12 @@ function CustomModal({
               </Typography>
             </Grid>
             <Grid item xs={12} sm={9}>
-              <TextField
-                id="name"
-                name="name"
-                value={formik.values.name}
-                onChange={formik.handleChange}
-                fullWidth
-              />
+              <TextField id="name" name="name" value={formik.values.name} onChange={formik.handleChange} fullWidth />
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={() =>
-              setMode({
-                open: false,
-                mode: modalMode,
-              })
-            }
-            color="primary"
-          >
+          <Button onClick={modalCloseHandler} color="primary">
             Huỷ
           </Button>
           {modalMode === 'view' && (

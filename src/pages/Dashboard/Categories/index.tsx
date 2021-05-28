@@ -30,79 +30,84 @@ import useStyles from 'styles/Dashboard/common';
 import rows from './rows';
 // import detail from './detail';
 
+import { RootState } from 'stores/store';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  setQueryState,
+  setDataGridRow,
+  setDataGridSelectedRow,
+  setOpenModal,
+  setModalMode,
+} from 'reducers/dashboard/dashboard';
+import { FETCH_CATEGORIES, DISABLE_CATEGORY, ENABLE_CATEGORY, REMOVE_CATEGORY } from 'reducers/dashboard/categories';
+
 export default function Categories(props: any) {
-  const [queryState, setQueryState] = useState<{
-    selectedTab: string;
-    currentPage: number;
-    rowsPerPage: number;
-    searchInput: string | undefined;
-  }>({
-    selectedTab: 'default',
-    currentPage: 1,
-    rowsPerPage: 10,
-    searchInput: undefined,
-  });
-  const { selectedTab, currentPage, rowsPerPage, searchInput } = queryState;
-  const [searchInputValue, setSearchInputValue] = useState<string | undefined>('');
-  const [dataGridRows, setDataGridRows] = useState<any[]>(rows);
+  const { query, rows, rowCount, selectedRow, openModal } = useSelector((state: RootState) => state.dashboard);
+  const { filter, page, limit, search } = query;
+  const dispatch = useDispatch();
+  const [searchValue, setsearchValue] = useState<string | undefined>('');
+
   const [openActionMenu, setOpenActionMenu] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState<null | HTMLElement>(null);
-  const [seletedRowValue, setSelectedRowValue] = useState<GridRowData | null>(null);
 
-  const [openCategoryModal, setOpenCategoryModal] = useState<{
-    open: boolean;
-    mode: 'edit' | 'view' | 'new';
-  }>({
-    open: false,
-    mode: 'new',
-  });
   const classes = useStyles();
   const history = useHistory();
   const location = useLocation();
   const dataGridRef = useRef<HTMLDivElement>(null);
   const getQueries = useCallback(() => {
     return parseQueries(location.search, {
-      filter: selectedTab,
+      filter: filter,
       search: undefined,
-      page: currentPage,
-      limit: rowsPerPage,
+      page: page,
+      limit: limit,
     });
   }, [location.search]);
   useEffect(function () {
     console.log('DID mount');
     const { filter, page, limit, search } = getQueries();
-    setSearchInputValue(search);
-    setQueryState({
-      selectedTab: filter,
-      currentPage: page,
-      rowsPerPage: limit,
-      searchInput: search,
-    });
-    console.log('Fetch data go br br', page, limit);
+    setsearchValue(search);
+    dispatch(setQueryState({ filter, page, limit, search }));
+    dispatch(FETCH_CATEGORIES());
   }, []);
   useNonInitialEffect(() => {
     history.push({
       search: qs.stringify({
-        filter: selectedTab,
-        page: currentPage,
-        limit: rowsPerPage,
-        search: searchInput,
+        filter: filter,
+        page: 1,
+        limit: 10,
+        search: search,
       }),
     });
-  }, [selectedTab, currentPage, rowsPerPage, searchInput]);
+  }, [filter]);
+
+  useNonInitialEffect(() => {
+    history.push({
+      search: qs.stringify({
+        filter: filter,
+        page: page,
+        limit: limit,
+        search: search,
+      }),
+    });
+  }, [page, limit, search]);
 
   useNonInitialEffect(() => {
     console.log('history changed');
     const { filter, page, limit, search } = getQueries();
-    setSearchInputValue(search);
-    setQueryState({
-      selectedTab: filter,
-      currentPage: page,
-      rowsPerPage: limit,
-      searchInput: search,
-    });
-    console.log('Fetch data go br br', currentPage, rowsPerPage);
+    setsearchValue(search);
+    dispatch(setQueryState({ filter, page, limit, search }));
+    dispatch(FETCH_CATEGORIES());
   }, [location.search]);
+
+  const changeQueryState = (item: object) => {
+    dispatch(
+      setQueryState({
+        ...query,
+        ...item,
+      }),
+    );
+  };
+
   const actionMenuItems: {
     title: string;
     onClick: () => void;
@@ -115,27 +120,35 @@ export default function Categories(props: any) {
         title: 'Chỉnh sửa danh mục',
         onClick: () => {
           setOpenActionMenu(false);
-          setOpenCategoryModal({
-            open: true,
-            mode: 'edit',
-          });
+          dispatch(setModalMode('edit'));
+          dispatch(setOpenModal(true));
         },
       },
       {
         title: 'Xoá (ẩn) danh mục',
         onClick: () => {
+          dispatch(DISABLE_CATEGORY());
           setOpenActionMenu(false);
-          console.log('delete category');
         },
         matches: {
           deleted: false,
         },
       },
       {
+        title: 'Bỏ xoá danh mục',
+        onClick: () => {
+          dispatch(ENABLE_CATEGORY());
+          setOpenActionMenu(false);
+        },
+        matches: {
+          deleted: true,
+        },
+      },
+      {
         title: 'Xoá danh mục vĩnh viễn',
         onClick: () => {
+          dispatch(REMOVE_CATEGORY());
           setOpenActionMenu(false);
-          console.log('delete category');
         },
         matches: {
           deleted: true,
@@ -159,7 +172,7 @@ export default function Categories(props: any) {
               color="inherit"
               aria-label="open action"
               onClick={(event: React.MouseEvent) => {
-                setSelectedRowValue(params.row);
+                dispatch(setDataGridSelectedRow(params.row));
                 setActionMenuAnchor(params.element as HTMLElement);
                 setOpenActionMenu(true);
               }}
@@ -177,9 +190,8 @@ export default function Categories(props: any) {
       label: 'Mặc định',
       value: 'default',
       onClick: () => {
-        setQueryState({
-          ...queryState,
-          selectedTab: 'default',
+        changeQueryState({
+          filter: 'default',
         });
       },
     },
@@ -187,9 +199,8 @@ export default function Categories(props: any) {
       label: 'Bị xoá (ẩn)',
       value: 'deleted',
       onClick: () => {
-        setQueryState({
-          ...queryState,
-          selectedTab: 'deleted',
+        changeQueryState({
+          filter: 'deleted',
         });
       },
     },
@@ -219,12 +230,10 @@ export default function Categories(props: any) {
                 variant="contained"
                 color="primary"
                 endIcon={<Icon>add</Icon>}
-                onClick={() =>
-                  setOpenCategoryModal({
-                    open: true,
-                    mode: 'new',
-                  })
-                }
+                onClick={() => {
+                  dispatch(setModalMode('new'));
+                  dispatch(setOpenModal(true));
+                }}
               >
                 Thêm mới
               </Button>
@@ -235,7 +244,7 @@ export default function Categories(props: any) {
           <Grid item xs={12}>
             <Grid container spacing={1} alignItems="center">
               <Grid item xs={12} sm={true}>
-                <Tabs value={selectedTab} indicatorColor="primary" textColor="primary">
+                <Tabs value={filter} indicatorColor="primary" textColor="primary">
                   {tabs.map(({ label, value, onClick }, index) => (
                     <Tab key={index} label={label} value={value} onClick={onClick} />
                   ))}
@@ -245,17 +254,16 @@ export default function Categories(props: any) {
                 <div className={classes.search}>
                   <InputBase
                     placeholder="Search…"
-                    value={searchInputValue}
+                    value={searchValue}
                     onKeyUp={(event: React.KeyboardEvent) => {
                       if (event.key === 'Enter') {
-                        setQueryState({
-                          ...queryState,
-                          searchInput: searchInputValue,
+                        changeQueryState({
+                          search: searchValue,
                         });
                       }
                     }}
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                      setSearchInputValue(event.target.value);
+                      setsearchValue(event.target.value);
                     }}
                     classes={{
                       root: classes.inputRoot,
@@ -270,9 +278,8 @@ export default function Categories(props: any) {
                       color="inherit"
                       aria-label="refresh page"
                       onClick={() =>
-                        setQueryState({
-                          ...queryState,
-                          searchInput: searchInputValue,
+                        changeQueryState({
+                          search: searchValue,
                         })
                       }
                     >
@@ -284,28 +291,26 @@ export default function Categories(props: any) {
             </Grid>
           </Grid>
           <Grid item xs={12}>
-            {!!dataGridRows.length && (
+            {!!rows.length && (
               <Paper elevation={1} style={{ padding: 10 }}>
                 <div style={{ flex: 1 }}>
                   <DataGrid
-                    rowCount={100}
+                    rowCount={rowCount}
                     paginationMode="server"
                     ref={dataGridRef}
                     autoHeight
-                    rows={dataGridRows}
+                    rows={rows}
                     columns={cols}
-                    page={currentPage - 1}
-                    pageSize={rowsPerPage}
+                    page={page - 1}
+                    pageSize={limit}
                     onPageChange={(param: GridPageChangeParams) => {
-                      setQueryState({
-                        ...queryState,
-                        currentPage: param.page + 1,
+                      changeQueryState({
+                        page: param.page + 1,
                       });
                     }}
                     onPageSizeChange={(param: GridPageChangeParams) => {
-                      setQueryState({
-                        ...queryState,
-                        rowsPerPage: param.pageSize,
+                      changeQueryState({
+                        limit: param.pageSize,
                       });
                     }}
                     rowsPerPageOptions={[5, 10, 20]}
@@ -318,13 +323,13 @@ export default function Categories(props: any) {
                     open={openActionMenu}
                     onClose={() => setOpenActionMenu(false)}
                   >
-                    {seletedRowValue &&
+                    {selectedRow &&
                       actionMenuItems &&
                       actionMenuItems.map(({ title, onClick, matches }, index) =>
                         !matches ||
                         (!!matches &&
                           Object.keys(matches)
-                            .map((key: any) => matches[key] === seletedRowValue[key])
+                            .map((key: any) => matches[key] === selectedRow[key])
                             .every((value) => !!value)) ? (
                           <MenuItem key={index} onClick={onClick}>
                             {title}
@@ -332,14 +337,7 @@ export default function Categories(props: any) {
                         ) : null,
                       )}
                   </Menu>
-                  {openCategoryModal && (
-                    <CategoryModal
-                      mode={openCategoryModal.mode}
-                      open={openCategoryModal.open}
-                      setMode={setOpenCategoryModal}
-                      item={seletedRowValue}
-                    ></CategoryModal>
-                  )}
+                  {openModal && <CategoryModal></CategoryModal>}
                 </div>
               </Paper>
             )}
