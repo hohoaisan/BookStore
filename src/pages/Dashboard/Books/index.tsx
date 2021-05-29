@@ -87,12 +87,23 @@ export default function Books(props: any) {
     history.push({
       search: qs.stringify({
         filter: filter,
+        page: 1,
+        limit: 10,
+        search: search,
+      }),
+    });
+  }, [filter]);
+
+  useNonInitialEffect(() => {
+    history.push({
+      search: qs.stringify({
+        filter: filter,
         page: page,
         limit: limit,
         search: search,
       }),
     });
-  }, [filter, page, limit, search]);
+  }, [page, limit, search]);
 
   useNonInitialEffect(() => {
     console.log('history changed');
