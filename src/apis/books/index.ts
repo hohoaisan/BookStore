@@ -31,6 +31,7 @@ export const create = ({
   imageurl,
   pages,
   weight,
+  publishDay,
   author,
   category,
   quantity,
@@ -43,6 +44,7 @@ export const create = ({
   imageurl?: string;
   pages: number;
   weight: number;
+  publishDay: string;
   author: number;
   category: number;
   quantity: number;
@@ -53,7 +55,20 @@ export const create = ({
   let config: AxiosRequestConfig = {
     method: 'post',
     url: `/api/Books`,
-    data: { name, description, imageurl, pages, weight, author, category, quantity, price, publisher, cover },
+    data: {
+      name,
+      description,
+      imageurl,
+      pages,
+      weight,
+      publishDay,
+      author,
+      category,
+      quantity,
+      price,
+      publisher,
+      cover,
+    },
   };
   return Axios(config);
 };
@@ -65,7 +80,7 @@ export const edit = ({
   imageurl,
   pages,
   weight,
-  // publishday,
+  publishDay,
   author,
   category,
   quantity,
@@ -79,7 +94,7 @@ export const edit = ({
   imageurl?: string;
   pages: number;
   weight: number;
-  // publishday;
+  publishDay: string;
   author: number;
   category: number;
   quantity: number;
@@ -97,7 +112,7 @@ export const edit = ({
       imageurl,
       pages,
       weight,
-      // publishday,
+      publishDay,
       author,
       category,
       quantity,

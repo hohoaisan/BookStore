@@ -34,6 +34,8 @@ import {
   setModalMode,
 } from 'reducers/dashboard/dashboard';
 import { FETCH_BOOKS, FETCH_BOOK, CREATE_BOOK, EDIT_BOOK, REMOVE_BOOK, ENABLE_BOOK } from 'reducers/dashboard/books';
+import { getAll as getAuthors } from 'apis/author/index';
+import { getAll as getCategories } from 'apis/categories/index';
 
 const initValue = {
   id: '',
@@ -66,6 +68,9 @@ function CustomModal() {
   //     .integer('Hãy nhập số hợp lệ'),
   //   email: yup.string().email('Hãy nhập email hợp lệ').required('Phải nhập email'),
   // });
+  const [authors, setAuthors] = useState<{ id: number; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+
   const { title, onFormSubmit } = React.useMemo(() => {
     switch (modalMode) {
       case 'edit':
@@ -79,7 +84,7 @@ function CustomModal() {
               imageurl,
               pages,
               weight,
-              publishday,
+              publishDay,
               author,
               category,
               quantity,
@@ -87,7 +92,7 @@ function CustomModal() {
               publisher,
               cover,
             } = values;
-            dispatch(EDIT_BOOK({ ...values}));
+            dispatch(EDIT_BOOK({ ...values }));
           },
         };
       case 'view':
@@ -106,7 +111,7 @@ function CustomModal() {
               imageurl,
               pages,
               weight,
-              publishday,
+              publishDay,
               author,
               category,
               quantity,
@@ -143,7 +148,6 @@ function CustomModal() {
         publisher,
         cover,
       } = modalData;
-      console.log(publishDay);
       formik.setValues({
         id,
         name,
@@ -172,6 +176,11 @@ function CustomModal() {
         formik.setValues(initValue);
     }
   }, [modalMode]);
+
+  useEffect(() => {
+    getAuthors({ filter: 'default', page: 1, limit: 1000000 }).then((res) => setAuthors(res.data.rows));
+    getCategories({ filter: 'default', page: 1, limit: 1000000 }).then((res) => setCategories(res.data.rows));
+  }, []);
   const disabled = modalMode === 'view';
   const modalCloseHandler = () => {
     dispatch(setOpenModal(false));
@@ -212,16 +221,21 @@ function CustomModal() {
               </Typography>
             </Grid>
             <Grid item xs={12} sm={9} md={4}>
-              <TextField
+              <Select
                 id="author"
                 name="author"
                 disabled={disabled}
                 value={formik.values.author}
                 onChange={formik.handleChange}
-                error={formik.touched.author && Boolean(formik.errors.author)}
-                helperText={formik.touched.author && formik.errors.author}
                 fullWidth
-              />
+              >
+                {authors &&
+                  authors.map(({ id, name }, index) => (
+                    <MenuItem key={index} value={id}>
+                      {name}
+                    </MenuItem>
+                  ))}
+              </Select>
             </Grid>
             <Grid item xs={12} sm={3} md={2}>
               <Typography variant="body1" component="span">
@@ -247,16 +261,21 @@ function CustomModal() {
               </Typography>
             </Grid>
             <Grid item xs={12} sm={9} md={4}>
-              <TextField
+              <Select
                 id="category"
                 name="category"
                 disabled={disabled}
                 value={formik.values.category}
                 onChange={formik.handleChange}
-                error={formik.touched.category && Boolean(formik.errors.category)}
-                helperText={formik.touched.category && formik.errors.category}
                 fullWidth
-              />
+              >
+                {categories &&
+                  categories.map(({ id, name }, index) => (
+                    <MenuItem key={index} value={id}>
+                      {name}
+                    </MenuItem>
+                  ))}
+              </Select>
             </Grid>
             <Grid item xs={12} sm={3} md={2}>
               <Typography variant="body1" component="span">

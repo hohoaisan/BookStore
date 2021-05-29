@@ -50,6 +50,7 @@ export const CREATE_BOOK =
     imageurl?: string;
     pages: number;
     weight: number;
+    publishDay: string;
     author: number;
     category: number;
     quantity: number;
@@ -82,7 +83,7 @@ export const EDIT_BOOK =
     imageurl?: string;
     pages: number;
     weight: number;
-    // publishday;
+    publishDay: string;
     author: number;
     category: number;
     quantity: number;
