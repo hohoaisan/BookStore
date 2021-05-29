@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useFormik } from 'formik';
+import { useFormik, FormikHelpers } from 'formik';
 import * as yup from 'yup';
 import {
   Typography,
@@ -23,79 +23,150 @@ import {
   MenuItem,
 } from '@material-ui/core';
 import { DataGrid, GridCellParams, GridRowData, GridPageChangeParams } from '@material-ui/data-grid';
+import { RootState } from 'stores/store';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  setQueryState,
+  setDataGridRow,
+  setDataGridSelectedRow,
+  setOpenModal,
+  setModalMode,
+} from 'reducers/dashboard/dashboard';
 
-function CustomModal({
-  open,
-  setMode,
-  mode,
-  item,
-}: {
-  open: boolean;
-  setMode: React.Dispatch<
-    React.SetStateAction<{
-      open: boolean;
-      mode: 'edit' | 'view' | 'new';
-    }>
-  >;
-  mode: 'edit' | 'view' | 'new';
-  item?: GridRowData | null;
-}) {
-  const [modalMode, setModalMode] = useState(mode);
-  useEffect(() => {
-    setModalMode(mode);
-  }, [mode]);
-  const validationSchema = yup.object({
-    username: yup.string().trim().max(25).min(8).required('Hãy nhập tên người dùng'),
-    fullname: yup.string().trim().max(50).min(2).required('Hãy nhập họ tên'),
-    phone: yup
-      .number()
-      .typeError('Hãy nhập số hợp lệ')
-      .required('Hãy nhập số điện thoại')
-      .positive('Hãy nhập số hợp lệ')
-      .integer('Hãy nhập số hợp lệ'),
-    email: yup.string().email('Hãy nhập email hợp lệ').required('Phải nhập email'),
-  });
-  const formik = useFormik({
-    initialValues: {
-      id: '',
-      username: '',
-      fullname: '',
-      sex: 'M',
-      phone: '',
-      email: '',
-      birthday: '2017-05-24',
-      province: '',
-      district: '',
-      ward: '',
-      address: '',
-      password: '',
-    },
-    validationSchema: validationSchema,
-    onSubmit: (values) => {
-      alert(JSON.stringify(values, null, 2));
-    },
-  });
-  const title = React.useMemo(() => {
+import {
+  FETCH_USERS,
+  FETCH_USER,
+  CREATE_USER,
+  EDIT_USER,
+  // REMOVE_USER,
+  DISABLE_USER,
+  ENABLE_USER,
+  SET_ADMIN,
+  REMOVE_ADMIN,
+} from 'reducers/dashboard/users';
+
+const initValue = {
+  id: '',
+  username: '',
+  fullname: '',
+  gender: 'true',
+  phone: '',
+  email: '',
+  // dob: '2017-05-24',
+  dob: new Date().toISOString().split('T')[0],
+  // province: '',
+  // district: '',
+  // ward: 0,
+  address: '',
+  // fullAddress: '',
+  password: '',
+};
+function CustomModal() {
+  const dispatch = useDispatch();
+  const { modalData, openModal, modalMode } = useSelector((state: RootState) => state.dashboard);
+  // const validationSchema = yup.object({
+  //   username: yup.string().trim().max(25).min(8).required('Hãy nhập tên người dùng'),
+  //   fullname: yup.string().trim().max(50).min(2).required('Hãy nhập họ tên'),
+  //   phone: yup
+  //     .number()
+  //     .typeError('Hãy nhập số hợp lệ')
+  //     .required('Hãy nhập số điện thoại')
+  //     .positive('Hãy nhập số hợp lệ')
+  //     .integer('Hãy nhập số hợp lệ'),
+  //   email: yup.string().email('Hãy nhập email hợp lệ').required('Phải nhập email'),
+  // });
+  const { title, onFormSubmit } = React.useMemo(() => {
     switch (modalMode) {
       case 'edit':
-        return 'Chỉnh sửa người dùng';
+        return {
+          title: 'Chỉnh sửa người dùng',
+          onFormSubmit: (values: typeof initValue) => {
+            const { id, username, fullname, gender, phone, email, dob, address, password } = values;
+            dispatch(EDIT_USER({ id, username, fullname, gender, phone, email, dob, address, password }));
+          },
+        };
       case 'view':
-        return 'Xem thông tin người dùng';
+        return {
+          title: 'Xem thông tin người dùng',
+          onFormSubmit: (values: any) => {},
+        };
       case 'new':
       default:
-        return 'Thêm người dùng mới';
+        return {
+          title: 'Thêm người dùng mới',
+          onFormSubmit: (values: typeof initValue, helpers: FormikHelpers<typeof initValue>) => {
+            const { id, username, fullname, gender, phone, email, dob, address, password } = values;
+            dispatch(
+              CREATE_USER({
+                username,
+                fullname,
+                gender: gender === 'true' ? true : false,
+                phone,
+                email,
+                dob,
+                address,
+                password,
+              }),
+            );
+          },
+        };
+    }
+  }, [modalMode]);
+  const formik = useFormik({
+    initialValues: initValue,
+    // validationSchema: validationSchema,
+    onSubmit: onFormSubmit,
+  });
+
+  useEffect(() => {
+    if (modalData && (modalMode === 'view' || modalMode === 'edit')) {
+      const {
+        id,
+        username,
+        fullname,
+        gender,
+        phone,
+        email,
+        // ward,
+        dob,
+        address,
+        // fullAddress
+      } = modalData;
+      formik.setValues({
+        ...initValue,
+        id,
+        username,
+        fullname,
+        gender: `${gender}`,
+        phone,
+        email,
+        dob: dob ? new Date(dob).toISOString().split('T')[0] : '',
+        // ward: Number.parseInt(ward),
+        address,
+        // fullAddress,
+      });
+    }
+  }, [modalData]);
+  useEffect(() => {
+    switch (modalMode) {
+      case 'edit':
+      case 'view':
+        dispatch(FETCH_USER());
+        break;
+      case 'new':
+      default:
+        formik.setValues(initValue);
     }
   }, [modalMode]);
   const disabled = modalMode === 'view';
+  const modalCloseHandler = () => {
+    dispatch(setOpenModal(false));
+    dispatch(setModalMode('new'));
+  };
   return (
     <Dialog
-      open={open}
-      onClose={() =>
-        setMode({
-          open: false,
-          mode: modalMode,
-        })
-      }
+      open={openModal}
+      onClose={modalCloseHandler}
       aria-labelledby="form-dialog-title"
       maxWidth="md"
       fullWidth={true}
@@ -181,9 +252,9 @@ function CustomModal({
               </Typography>
             </Grid>
             <Grid item xs={12} sm={9} md={4}>
-              <RadioGroup aria-label="sex" name="sex" value={formik.values.sex} onChange={formik.handleChange}>
-                <FormControlLabel value="M" disabled={disabled} control={<Radio />} label="Nam" />
-                <FormControlLabel value="F" disabled={disabled} control={<Radio />} label="Nữ" />
+              <RadioGroup aria-label="gender" name="gender" value={formik.values.gender} onChange={formik.handleChange}>
+                <FormControlLabel value="true" disabled={disabled} control={<Radio />} label="Nam" />
+                <FormControlLabel value="false" disabled={disabled} control={<Radio />} label="Nữ" />
               </RadioGroup>
             </Grid>
 
@@ -194,11 +265,11 @@ function CustomModal({
             </Grid>
             <Grid item xs={12} sm={9} md={4}>
               <TextField
-                id="birthday"
-                name="birthday"
+                id="dob"
+                name="dob"
                 type="date"
                 disabled={disabled}
-                value={formik.values.birthday}
+                value={formik.values.dob}
                 onChange={formik.handleChange}
                 InputLabelProps={{
                   shrink: true,
@@ -212,80 +283,95 @@ function CustomModal({
               </Typography>
             </Grid>
             <Grid item xs={12} sm={9} md={10}>
-              <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12} sm={3} md={2}>
-                  <Typography variant="body1" component="span">
-                    Tỉnh thành phố
-                  </Typography>
+              {/* {disabled && ( */}
+              <TextField
+                // id="fullAddress"
+                // name="fullAddress"
+                id="address"
+                name="address"
+                disabled={disabled}
+                // value={formik.values.fullAddress}
+                value={formik.values.address}
+                onChange={formik.handleChange}
+                fullWidth
+              />
+              {/* )} */}
+              {/* {!disabled && (
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} sm={3} md={2}>
+                    <Typography variant="body1" component="span">
+                      Tỉnh thành phố
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={9}>
+                    <Select
+                      id="province"
+                      name="province"
+                      disabled={disabled}
+                      value={formik.values.province}
+                      onChange={formik.handleChange}
+                      fullWidth
+                    >
+                      <MenuItem value={10}>Ten</MenuItem>
+                      <MenuItem value={20}>Twenty</MenuItem>
+                      <MenuItem value={30}>Thirty</MenuItem>
+                    </Select>
+                  </Grid>
+                  <Grid item xs={12} sm={3} md={2}>
+                    <Typography variant="body1" component="span">
+                      Quận huyện
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={9}>
+                    <Select
+                      id="district"
+                      name="district"
+                      disabled={disabled}
+                      value={formik.values.district}
+                      onChange={formik.handleChange}
+                      fullWidth
+                    >
+                      <MenuItem value={10}>Ten</MenuItem>
+                      <MenuItem value={20}>Twenty</MenuItem>
+                      <MenuItem value={30}>Thirty</MenuItem>
+                    </Select>
+                  </Grid>
+                  <Grid item xs={12} sm={3} md={2}>
+                    <Typography variant="body1" component="span">
+                      Phường xã
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={9}>
+                    <Select
+                      id="ward"
+                      name="ward"
+                      disabled={disabled}
+                      value={formik.values.ward}
+                      onChange={formik.handleChange}
+                      fullWidth
+                    >
+                      <MenuItem value={10}>Ten</MenuItem>
+                      <MenuItem value={20}>Twenty</MenuItem>
+                      <MenuItem value={30}>Thirty</MenuItem>
+                    </Select>
+                  </Grid>
+                  <Grid item xs={12} sm={3} md={2}>
+                    <Typography variant="body1" component="span">
+                      Số đường/nhà
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={9}>
+                    <TextField
+                      id="address"
+                      name="address"
+                      disabled={disabled}
+                      value={formik.values.address}
+                      onChange={formik.handleChange}
+                      fullWidth
+                    />
+                  </Grid>
                 </Grid>
-                <Grid item xs={12} sm={9}>
-                  <Select
-                    id="province"
-                    name="province"
-                    disabled={disabled}
-                    value={formik.values.province}
-                    onChange={formik.handleChange}
-                    fullWidth
-                  >
-                    <MenuItem value={10}>Ten</MenuItem>
-                    <MenuItem value={20}>Twenty</MenuItem>
-                    <MenuItem value={30}>Thirty</MenuItem>
-                  </Select>
-                </Grid>
-                <Grid item xs={12} sm={3} md={2}>
-                  <Typography variant="body1" component="span">
-                    Quận huyện
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={9}>
-                  <Select
-                    id="district"
-                    name="district"
-                    disabled={disabled}
-                    value={formik.values.district}
-                    onChange={formik.handleChange}
-                    fullWidth
-                  >
-                    <MenuItem value={10}>Ten</MenuItem>
-                    <MenuItem value={20}>Twenty</MenuItem>
-                    <MenuItem value={30}>Thirty</MenuItem>
-                  </Select>
-                </Grid>
-                <Grid item xs={12} sm={3} md={2}>
-                  <Typography variant="body1" component="span">
-                    Phường xã
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={9}>
-                  <Select
-                    id="ward"
-                    name="ward"
-                    disabled={disabled}
-                    value={formik.values.ward}
-                    onChange={formik.handleChange}
-                    fullWidth
-                  >
-                    <MenuItem value={10}>Ten</MenuItem>
-                    <MenuItem value={20}>Twenty</MenuItem>
-                    <MenuItem value={30}>Thirty</MenuItem>
-                  </Select>
-                </Grid>
-                <Grid item xs={12} sm={3} md={2}>
-                  <Typography variant="body1" component="span">
-                    Số đường/nhà
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={9}>
-                  <TextField
-                    id="address"
-                    name="address"
-                    disabled={disabled}
-                    value={formik.values.address}
-                    onChange={formik.handleChange}
-                    fullWidth
-                  />
-                </Grid>
-              </Grid>
+              )} */}
             </Grid>
             {!disabled && (
               <>
@@ -309,19 +395,11 @@ function CustomModal({
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={() =>
-              setMode({
-                open: false,
-                mode: modalMode,
-              })
-            }
-            color="primary"
-          >
+          <Button onClick={modalCloseHandler} color="primary">
             Huỷ
           </Button>
           {modalMode === 'view' && (
-            <Button color="primary" variant="contained" onClick={() => setModalMode('edit')}>
+            <Button color="primary" variant="contained" onClick={() => dispatch(setModalMode('edit'))}>
               Chỉnh sửa
             </Button>
           )}

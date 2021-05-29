@@ -27,85 +27,110 @@ import { BrowserRouter as Router, Switch, Route, useHistory, useLocation } from 
 import UserDataGridRow from 'interfaces/Dashboard/UserDataGridRow';
 import parseQueries from 'helpers/parseQueries';
 
-import UserDetailModal from 'components/Dashboard/UserDetailModal';
 import UserModal from 'components/Dashboard/UserModal';
 import useStyles from 'styles/Dashboard/common';
 import rows from './rows';
 // import detail from './detail';
+import { RootState } from 'stores/store';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  setQueryState,
+  setDataGridRow,
+  setDataGridSelectedRow,
+  setOpenModal,
+  setModalMode,
+} from 'reducers/dashboard/dashboard';
+
+import {
+  FETCH_USERS,
+  FETCH_USER,
+  CREATE_USER,
+  EDIT_USER,
+  // REMOVE_USER,
+  DISABLE_USER,
+  ENABLE_USER,
+  SET_ADMIN,
+  REMOVE_ADMIN,
+} from 'reducers/dashboard/users';
 
 export default function User(props: any) {
-  const [queryState, setQueryState] = useState<{
-    selectedTab: string;
-    currentPage: number;
-    rowsPerPage: number;
-    searchInput: string | undefined;
-  }>({
-    selectedTab: 'all',
-    currentPage: 1,
-    rowsPerPage: 10,
-    searchInput: undefined,
-  });
-  const { selectedTab, currentPage, rowsPerPage, searchInput } = queryState;
-  const [searchInputValue, setSearchInputValue] = useState<string | undefined>('');
-  const [dataGridRows, setDataGridRows] = useState<any[]>(rows);
+  const { query, rows, rowCount, selectedRow, openModal } = useSelector((state: RootState) => state.dashboard);
+  const { filter, page, limit, search } = query;
+  const dispatch = useDispatch();
+
+  const [searchValue, setsearchValue] = useState<string | undefined>('');
   const [openActionMenu, setOpenActionMenu] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState<null | HTMLElement>(null);
-  const [seletedRowValue, setSelectedRowValue] = useState<GridRowData | null>(null);
-  // const [modalUserDetail, setModalUserDetail] = useState<null | OrderDetail>();
-  const [openUserModal, setOpenUserModal] = useState<{
-    open: boolean;
-    mode: 'edit' | 'view' | 'new';
-  }>({
-    open: false,
-    mode: 'new',
-  });
+
   const classes = useStyles();
   const history = useHistory();
   const location = useLocation();
   const dataGridRef = useRef<HTMLDivElement>(null);
   const getQueries = useCallback(() => {
     return parseQueries(location.search, {
-      filter: selectedTab,
+      filter: filter,
       search: undefined,
-      page: currentPage,
-      limit: rowsPerPage,
+      page: page,
+      limit: limit,
     });
   }, [location.search]);
   useEffect(function () {
     console.log('DID mount');
     const { filter, page, limit, search } = getQueries();
-    setSearchInputValue(search);
+    setsearchValue(search);
     setQueryState({
-      selectedTab: filter,
-      currentPage: page,
-      rowsPerPage: limit,
-      searchInput: search,
+      filter: filter,
+      page: page,
+      limit: limit,
+      search: search,
     });
-    console.log('Fetch data go br br', filter, page, limit);
+    dispatch(FETCH_USERS());
   }, []);
+
   useNonInitialEffect(() => {
     history.push({
       search: qs.stringify({
-        filter: selectedTab,
-        page: currentPage,
-        limit: rowsPerPage,
-        search: searchInput,
+        filter: filter,
+        page: 1,
+        limit: 10,
+        search: search,
       }),
     });
-  }, [selectedTab, currentPage, rowsPerPage, searchInput]);
+  }, [filter]);
+
+  useNonInitialEffect(() => {
+    history.push({
+      search: qs.stringify({
+        filter: filter,
+        page: page,
+        limit: limit,
+        search: search,
+      }),
+    });
+  }, [page, limit, search]);
 
   useNonInitialEffect(() => {
     console.log('history changed');
     const { filter, page, limit, search } = getQueries();
-    setSearchInputValue(search);
+    setsearchValue(search);
     setQueryState({
-      selectedTab: filter,
-      currentPage: page,
-      rowsPerPage: limit,
-      searchInput: search,
+      filter: filter,
+      page: page,
+      limit: limit,
+      search: search,
     });
-    console.log('Fetch data go br br', selectedTab, currentPage, rowsPerPage);
+    dispatch(FETCH_USERS());
   }, [location.search]);
+
+  const changeQueryState = (item: object) => {
+    dispatch(
+      setQueryState({
+        ...query,
+        ...item,
+      }),
+    );
+  };
+
   const actionMenuItems: {
     title: string;
     onClick: () => void;
@@ -118,60 +143,66 @@ export default function User(props: any) {
         title: 'Xem thông tin chi tiết',
         onClick: () => {
           setOpenActionMenu(false);
-          setOpenUserModal({
-            open: true,
-            mode: 'view',
-          });
+          dispatch(setModalMode('view'));
+          dispatch(setOpenModal(true));
         },
       },
       {
         title: 'Chỉnh sửa thông tin',
         onClick: () => {
           setOpenActionMenu(false);
-          setOpenUserModal({
-            open: true,
-            mode: 'edit',
-          });
+          dispatch(setModalMode('edit'));
+          dispatch(setOpenModal(true));
         },
       },
       {
         title: 'Đặt làm quản trị viên',
         onClick: () => {
+          dispatch(SET_ADMIN());
           setOpenActionMenu(false);
         },
         matches: {
-          isAdmin: false,
+          admin: false,
         },
       },
       {
         title: 'Xoá vai trò quản trị viên',
-        onClick: () => console.log('clicked'),
+        onClick: () => {
+          dispatch(REMOVE_ADMIN());
+          setOpenActionMenu(false);
+        },
         matches: {
-          isAdmin: true,
+          admin: true,
         },
       },
       {
         title: 'Vô hiệu hoá người dùng',
-        onClick: () => console.log('clicked'),
+        onClick: () => {
+          dispatch(DISABLE_USER());
+          setOpenActionMenu(false);
+        },
         matches: {
-          isDisabled: false,
-          isAdmin: false,
+          disable: false,
+          admin: false,
         },
       },
       {
         title: 'Kích hoạt lại người dùng',
-        onClick: () => console.log('clicked'),
+        onClick: () => {
+          dispatch(ENABLE_USER());
+          setOpenActionMenu(false);
+        },
         matches: {
-          isDisabled: true,
+          disable: true,
         },
       },
-      {
-        title: 'Xoá tài khoản',
-        onClick: () => console.log('clicked'),
-        matches: {
-          isAdmin: false,
-        },
-      },
+      // {
+      //   title: 'Xoá tài khoản',
+      //   onClick: () => console.log('clicked'),
+      //   matches: {
+      //     admin: false,
+      //   },
+      // },
     ],
     [],
   );
@@ -180,7 +211,12 @@ export default function User(props: any) {
       { field: 'id', headerName: 'Mã người dùng', width: 100 },
       { field: 'username', headerName: 'Tên người dùng', width: 150 },
       { field: 'fullname', headerName: 'Họ và tên', flex: 1 },
-      { field: 'sex', headerName: 'Giới tính', width: 120 },
+      {
+        field: 'gender',
+        headerName: 'Giới tính',
+        width: 120,
+        renderCell: (params: GridCellParams) => <span> {params.value === true ? 'Nam' : 'Nữ'}</span>,
+      },
       { field: 'phone', headerName: 'Số điện thoại', width: 150 },
       { field: 'email', headerName: 'Email', width: 200 },
       {
@@ -194,7 +230,7 @@ export default function User(props: any) {
               color="inherit"
               aria-label="open action"
               onClick={(event: React.MouseEvent) => {
-                setSelectedRowValue(params.row);
+                dispatch(setDataGridSelectedRow(params.row));
                 setActionMenuAnchor(params.element as HTMLElement);
                 setOpenActionMenu(true);
               }}
@@ -209,12 +245,11 @@ export default function User(props: any) {
   );
   const tabs = [
     {
-      label: 'Tất cả',
-      value: 'all',
+      label: 'Mặc định',
+      value: 'default',
       onClick: () => {
-        setQueryState({
-          ...queryState,
-          selectedTab: 'all',
+        changeQueryState({
+          filter: 'default',
         });
       },
     },
@@ -222,9 +257,8 @@ export default function User(props: any) {
       label: 'Bị vô hiệu hoá',
       value: 'disabled',
       onClick: () => {
-        setQueryState({
-          ...queryState,
-          selectedTab: 'disabled',
+        changeQueryState({
+          filter: 'disabled',
         });
       },
     },
@@ -232,22 +266,20 @@ export default function User(props: any) {
       label: 'Quản trị viên',
       value: 'admin',
       onClick: () => {
-        setQueryState({
-          ...queryState,
-          selectedTab: 'admin',
+        changeQueryState({
+          filter: 'admin',
         });
       },
     },
-    {
-      label: 'Đã bị xoá',
-      value: 'deleted',
-      onClick: () => {
-        setQueryState({
-          ...queryState,
-          selectedTab: 'deleted',
-        });
-      },
-    },
+    // {
+    //   label: 'Đã bị xoá',
+    //   value: 'deleted',
+    //   onClick: () => {
+    //     changeQueryState({
+    //       filter: 'deleted',
+    //     });
+    //   },
+    // },
   ];
   return (
     <Paper elevation={0} className={classes.content}>
@@ -267,19 +299,22 @@ export default function User(props: any) {
               </Typography>
             </Grid>
             <Grid item xs="auto">
-              <IconButton edge="start" color="inherit" aria-label="refresh page" onClick={() => console.log('refresh')}>
+              <IconButton
+                edge="start"
+                color="inherit"
+                aria-label="refresh page"
+                onClick={() => dispatch(FETCH_USERS())}
+              >
                 <ReplayIcon />
               </IconButton>
               <Button
                 variant="contained"
                 color="primary"
                 endIcon={<Icon>add</Icon>}
-                onClick={() =>
-                  setOpenUserModal({
-                    open: true,
-                    mode: 'new',
-                  })
-                }
+                onClick={() => {
+                  dispatch(setModalMode('new'));
+                  dispatch(setOpenModal(true));
+                }}
               >
                 Thêm mới
               </Button>
@@ -290,7 +325,7 @@ export default function User(props: any) {
           <Grid item xs={12}>
             <Grid container spacing={1} alignItems="center">
               <Grid item xs={12} sm={true}>
-                <Tabs value={selectedTab} indicatorColor="primary" textColor="primary">
+                <Tabs value={filter} indicatorColor="primary" textColor="primary">
                   {tabs.map(({ label, value, onClick }, index) => (
                     <Tab key={index} label={label} value={value} onClick={onClick} />
                   ))}
@@ -300,17 +335,16 @@ export default function User(props: any) {
                 <div className={classes.search}>
                   <InputBase
                     placeholder="Search…"
-                    value={searchInputValue}
+                    value={searchValue}
                     onKeyUp={(event: React.KeyboardEvent) => {
                       if (event.key === 'Enter') {
-                        setQueryState({
-                          ...queryState,
-                          searchInput: searchInputValue,
+                        changeQueryState({
+                          search: searchValue,
                         });
                       }
                     }}
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                      setSearchInputValue(event.target.value);
+                      setsearchValue(event.target.value);
                     }}
                     classes={{
                       root: classes.inputRoot,
@@ -325,9 +359,8 @@ export default function User(props: any) {
                       color="inherit"
                       aria-label="refresh page"
                       onClick={() =>
-                        setQueryState({
-                          ...queryState,
-                          searchInput: searchInputValue,
+                        changeQueryState({
+                          search: searchValue,
                         })
                       }
                     >
@@ -339,29 +372,27 @@ export default function User(props: any) {
             </Grid>
           </Grid>
           <Grid item xs={12}>
-            {!!dataGridRows.length && (
+            {!!rows.length && (
               <Paper elevation={1} style={{ padding: 10 }}>
                 <div style={{ flex: 1 }}>
                   <DataGrid
                     // density="compact"
-                    rowCount={100}
+                    rowCount={rowCount}
                     paginationMode="server"
                     ref={dataGridRef}
                     autoHeight
-                    rows={dataGridRows}
+                    rows={rows}
                     columns={cols}
-                    page={currentPage - 1}
-                    pageSize={rowsPerPage}
+                    page={page - 1}
+                    pageSize={limit}
                     onPageChange={(param: GridPageChangeParams) => {
-                      setQueryState({
-                        ...queryState,
-                        currentPage: param.page + 1,
+                      changeQueryState({
+                        page: param.page + 1,
                       });
                     }}
                     onPageSizeChange={(param: GridPageChangeParams) => {
-                      setQueryState({
-                        ...queryState,
-                        rowsPerPage: param.pageSize,
+                      changeQueryState({
+                        limit: param.pageSize,
                       });
                     }}
                     rowsPerPageOptions={[5, 10, 20]}
@@ -374,13 +405,13 @@ export default function User(props: any) {
                     open={openActionMenu}
                     onClose={() => setOpenActionMenu(false)}
                   >
-                    {seletedRowValue &&
+                    {selectedRow &&
                       actionMenuItems &&
                       actionMenuItems.map(({ title, onClick, matches }, index) =>
                         !matches ||
                         (!!matches &&
                           Object.keys(matches)
-                            .map((key: any) => matches[key] === seletedRowValue[key])
+                            .map((key: any) => matches[key] === selectedRow[key])
                             .every((value) => !!value)) ? (
                           <MenuItem key={index} onClick={onClick}>
                             {title}
@@ -388,14 +419,7 @@ export default function User(props: any) {
                         ) : null,
                       )}
                   </Menu>
-                  {openUserModal && (
-                    <UserModal
-                      mode={openUserModal.mode}
-                      open={openUserModal.open}
-                      setMode={setOpenUserModal}
-                      item={seletedRowValue}
-                    ></UserModal>
-                  )}
+                  {openModal && <UserModal></UserModal>}
                 </div>
               </Paper>
             )}
