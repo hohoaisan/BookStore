@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useFormik } from 'formik';
+import { useFormik, FormikHelpers } from 'formik';
 import * as yup from 'yup';
 import {
   Typography,
@@ -24,26 +24,37 @@ import {
 } from '@material-ui/core';
 import { DataGrid, GridCellParams, GridRowData, GridPageChangeParams } from '@material-ui/data-grid';
 
-function CustomModal({
-  open,
-  setMode,
-  mode,
-  item,
-}: {
-  open: boolean;
-  setMode: React.Dispatch<
-    React.SetStateAction<{
-      open: boolean;
-      mode: 'edit' | 'view' | 'new';
-    }>
-  >;
-  mode: 'edit' | 'view' | 'new';
-  item?: GridRowData | null;
-}) {
-  const [modalMode, setModalMode] = useState(mode);
-  useEffect(() => {
-    setModalMode(mode);
-  }, [mode]);
+import { RootState } from 'stores/store';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  setQueryState,
+  setDataGridRow,
+  setDataGridSelectedRow,
+  setOpenModal,
+  setModalMode,
+} from 'reducers/dashboard/dashboard';
+import { FETCH_BOOKS, FETCH_BOOK, CREATE_BOOK, EDIT_BOOK, REMOVE_BOOK, ENABLE_BOOK } from 'reducers/dashboard/books';
+
+const initValue = {
+  id: '',
+  name: '',
+  imageurl: '',
+  author: '',
+  category: '',
+  pages: 0,
+  weight: 0,
+  publisher: '',
+  cover: 'Bìa mềm',
+  publishDay: new Date().toISOString().split('T')[0],
+  quantity: 0,
+  price: 0,
+  description: '',
+};
+
+function CustomModal() {
+  const dispatch = useDispatch();
+  const { modalData, openModal, modalMode } = useSelector((state: RootState) => state.dashboard);
+
   // const validationSchema = yup.object({
   //   username: yup.string().trim().max(25).min(8).required('Hãy nhập tên người dùng'),
   //   fullname: yup.string().trim().max(50).min(2).required('Hãy nhập họ tên'),
@@ -55,47 +66,121 @@ function CustomModal({
   //     .integer('Hãy nhập số hợp lệ'),
   //   email: yup.string().email('Hãy nhập email hợp lệ').required('Phải nhập email'),
   // });
-  const formik = useFormik({
-    initialValues: {
-      id: '',
-      name: '',
-      author: 'Tô Hoài',
-      category: 'Văn học',
-      page: 1,
-      weight: '',
-      publisher: '',
-      cover_type: '',
-      publish_day: '25-11-1999',
-      quantity: 1932,
-      price: 15000,
-      description: '',
-    },
-    // validationSchema: validationSchema,
-    onSubmit: (values) => {
-      alert(JSON.stringify(values, null, 2));
-    },
-  });
-  const title = React.useMemo(() => {
+  const { title, onFormSubmit } = React.useMemo(() => {
     switch (modalMode) {
       case 'edit':
-        return 'Chỉnh sửa sách';
+        return {
+          title: 'Chỉnh sửa sách',
+          onFormSubmit: (values: any) => {
+            let {
+              id,
+              name,
+              description,
+              imageurl,
+              pages,
+              weight,
+              publishday,
+              author,
+              category,
+              quantity,
+              price,
+              publisher,
+              cover,
+            } = values;
+            dispatch(EDIT_BOOK({ ...values}));
+          },
+        };
       case 'view':
-        return 'Xem thông tin sách';
+        return {
+          title: 'Xem thông tin sách',
+          onFormSubmit: (values: any) => {},
+        };
       case 'new':
       default:
-        return 'Thêm sách mới';
+        return {
+          title: 'Thêm sách mới',
+          onFormSubmit: (values: any, helpers: FormikHelpers<typeof initValue>) => {
+            const {
+              name,
+              description,
+              imageurl,
+              pages,
+              weight,
+              publishday,
+              author,
+              category,
+              quantity,
+              price,
+              publisher,
+              cover,
+            } = values;
+            // alert(JSON.stringify(values));
+            dispatch(CREATE_BOOK(values));
+          },
+        };
+    }
+  }, [modalMode]);
+
+  const formik = useFormik({
+    initialValues: initValue,
+    // validationSchema: validationSchema,
+    onSubmit: onFormSubmit,
+  });
+  useEffect(() => {
+    if (modalData && (modalMode === 'view' || modalMode === 'edit')) {
+      const {
+        id,
+        name,
+        description,
+        imageurl,
+        pages,
+        weight,
+        publishDay,
+        author,
+        category,
+        quantity,
+        price,
+        publisher,
+        cover,
+      } = modalData;
+      console.log(publishDay);
+      formik.setValues({
+        id,
+        name,
+        description,
+        imageurl,
+        pages: Number.parseInt(pages),
+        weight: Number.parseInt(weight),
+        publishDay: publishDay ? new Date(publishDay).toISOString().split('T')[0] : '',
+        author,
+        category,
+        quantity: Number.parseInt(quantity),
+        price: Number.parseInt(price),
+        publisher,
+        cover,
+      });
+    }
+  }, [modalData]);
+  useEffect(() => {
+    switch (modalMode) {
+      case 'edit':
+      case 'view':
+        dispatch(FETCH_BOOK());
+        break;
+      case 'new':
+      default:
+        formik.setValues(initValue);
     }
   }, [modalMode]);
   const disabled = modalMode === 'view';
+  const modalCloseHandler = () => {
+    dispatch(setOpenModal(false));
+    dispatch(setModalMode('new'));
+  };
   return (
     <Dialog
-      open={open}
-      onClose={() =>
-        setMode({
-          open: false,
-          mode: modalMode,
-        })
-      }
+      open={openModal}
+      onClose={modalCloseHandler}
       aria-labelledby="form-dialog-title"
       maxWidth="md"
       fullWidth={true}
@@ -145,13 +230,14 @@ function CustomModal({
             </Grid>
             <Grid item xs={12} sm={9} md={4}>
               <TextField
-                id="page"
-                name="page"
+                id="pages"
+                name="pages"
+                type="number"
                 disabled={disabled}
-                value={formik.values.page}
+                value={formik.values.pages}
                 onChange={formik.handleChange}
-                error={formik.touched.page && Boolean(formik.errors.page)}
-                helperText={formik.touched.page && formik.errors.page}
+                error={formik.touched.pages && Boolean(formik.errors.pages)}
+                helperText={formik.touched.pages && formik.errors.pages}
                 fullWidth
               />
             </Grid>
@@ -181,6 +267,7 @@ function CustomModal({
               <TextField
                 id="weight"
                 name="weight"
+                type="number"
                 disabled={disabled}
                 value={formik.values.weight}
                 onChange={formik.handleChange}
@@ -196,13 +283,13 @@ function CustomModal({
             </Grid>
             <Grid item xs={12} sm={9} md={4}>
               <TextField
-                id="cover_type"
-                name="cover_type"
+                id="cover"
+                name="cover"
                 disabled={disabled}
-                value={formik.values.cover_type}
+                value={formik.values.cover}
                 onChange={formik.handleChange}
-                error={formik.touched.cover_type && Boolean(formik.errors.cover_type)}
-                helperText={formik.touched.cover_type && formik.errors.cover_type}
+                error={formik.touched.cover && Boolean(formik.errors.cover)}
+                helperText={formik.touched.cover && formik.errors.cover}
                 fullWidth
               />
             </Grid>
@@ -230,14 +317,14 @@ function CustomModal({
             </Grid>
             <Grid item xs={12} sm={9} md={4}>
               <TextField
-                id="publish_day"
-                name="publish_day"
+                id="publishDay"
+                name="publishDay"
                 disabled={disabled}
                 type="date"
-                value={formik.values.publish_day}
+                value={formik.values.publishDay}
                 onChange={formik.handleChange}
-                error={formik.touched.publish_day && Boolean(formik.errors.publish_day)}
-                helperText={formik.touched.publish_day && formik.errors.publish_day}
+                error={formik.touched.publishDay && Boolean(formik.errors.publishDay)}
+                helperText={formik.touched.publishDay && formik.errors.publishDay}
                 fullWidth
               />
             </Grid>
@@ -300,19 +387,11 @@ function CustomModal({
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={() =>
-              setMode({
-                open: false,
-                mode: modalMode,
-              })
-            }
-            color="primary"
-          >
+          <Button onClick={modalCloseHandler} color="primary">
             Huỷ
           </Button>
           {modalMode === 'view' && (
-            <Button color="primary" variant="contained" onClick={() => setModalMode('edit')}>
+            <Button color="primary" variant="contained" onClick={() => dispatch(setModalMode('edit'))}>
               Chỉnh sửa
             </Button>
           )}

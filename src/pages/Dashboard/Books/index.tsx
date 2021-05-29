@@ -28,82 +28,94 @@ import BookModal from 'components/Dashboard/BookModal';
 import parseQueries from 'helpers/parseQueries';
 
 import useStyles from 'styles/Dashboard/common';
-import rows from './rows';
+// import rows from './rows';
 // import detail from './detail';
+import { RootState } from 'stores/store';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  setQueryState,
+  setDataGridRow,
+  setDataGridSelectedRow,
+  setOpenModal,
+  setModalMode,
+} from 'reducers/dashboard/dashboard';
+
+import {
+  FETCH_BOOKS,
+  FETCH_BOOK,
+  CREATE_BOOK,
+  EDIT_BOOK,
+  REMOVE_BOOK,
+  DISABLE_BOOK,
+  ENABLE_BOOK,
+} from 'reducers/dashboard/books';
 
 export default function Books(props: any) {
-  const [queryState, setQueryState] = useState<{
-    selectedTab: string;
-    currentPage: number;
-    rowsPerPage: number;
-    searchInput: string | undefined;
-  }>({
-    selectedTab: 'default',
-    currentPage: 1,
-    rowsPerPage: 10,
-    searchInput: undefined,
-  });
-  const { selectedTab, currentPage, rowsPerPage, searchInput } = queryState;
-  const [searchInputValue, setSearchInputValue] = useState<string | undefined>('');
-  const [dataGridRows, setDataGridRows] = useState<any[]>(rows);
+  const { query, rows, rowCount, selectedRow, openModal } = useSelector((state: RootState) => state.dashboard);
+  const { filter, page, limit, search } = query;
+  const dispatch = useDispatch();
+
+  const [searchValue, setsearchValue] = useState<string | undefined>('');
   const [openActionMenu, setOpenActionMenu] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState<null | HTMLElement>(null);
-  const [seletedRowValue, setSelectedRowValue] = useState<GridRowData | null>(null);
 
-  const [openBookModal, setOpenBookModal] = useState<{
-    open: boolean;
-    mode: 'edit' | 'view' | 'new';
-  }>({
-    open: false,
-    mode: 'new',
-  });
   const classes = useStyles();
   const history = useHistory();
   const location = useLocation();
   const dataGridRef = useRef<HTMLDivElement>(null);
   const getQueries = useCallback(() => {
     return parseQueries(location.search, {
-      filter: selectedTab,
+      filter: filter,
       search: undefined,
-      page: currentPage,
-      limit: rowsPerPage,
+      page: page,
+      limit: limit,
     });
   }, [location.search]);
   useEffect(function () {
     console.log('DID mount');
     const { filter, page, limit, search } = getQueries();
-    setSearchInputValue(search);
+    setsearchValue(search);
     setQueryState({
-      selectedTab: filter,
-      currentPage: page,
-      rowsPerPage: limit,
-      searchInput: search,
+      filter: filter,
+      page: page,
+      limit: limit,
+      search: search,
     });
-    console.log('Fetch data go br br', page, limit);
+    dispatch(FETCH_BOOKS());
   }, []);
   useNonInitialEffect(() => {
     history.push({
       search: qs.stringify({
-        filter: selectedTab,
-        page: currentPage,
-        limit: rowsPerPage,
-        search: searchInput,
+        filter: filter,
+        page: page,
+        limit: limit,
+        search: search,
       }),
     });
-  }, [selectedTab, currentPage, rowsPerPage, searchInput]);
+  }, [filter, page, limit, search]);
 
   useNonInitialEffect(() => {
     console.log('history changed');
     const { filter, page, limit, search } = getQueries();
-    setSearchInputValue(search);
+    setsearchValue(search);
     setQueryState({
-      selectedTab: filter,
-      currentPage: page,
-      rowsPerPage: limit,
-      searchInput: search,
+      filter: filter,
+      page: page,
+      limit: limit,
+      search: search,
     });
-    console.log('Fetch data go br br', currentPage, rowsPerPage);
+    dispatch(FETCH_BOOKS());
   }, [location.search]);
+
+  const changeQueryState = (item: object) => {
+    dispatch(
+      setQueryState({
+        ...query,
+        ...item,
+      }),
+    );
+  };
+
   const actionMenuItems: {
     title: string;
     onClick: () => void;
@@ -116,40 +128,49 @@ export default function Books(props: any) {
         title: 'Xem thông tin chi tiết',
         onClick: () => {
           setOpenActionMenu(false);
-          setOpenBookModal({
-            open: true,
-            mode: 'view',
-          });
+          dispatch(setModalMode('view'));
+          dispatch(setOpenModal(true));
         },
       },
       {
         title: 'Chỉnh sửa thông tin',
         onClick: () => {
           setOpenActionMenu(false);
-          setOpenBookModal({
-            open: true,
-            mode: 'edit',
-          });
+          dispatch(setModalMode('edit'));
+          dispatch(setOpenModal(true));
         },
       },
       {
         title: 'Xoá (ẩn) sách',
         onClick: () => {
-          console.log('hide book');
+          dispatch(DISABLE_BOOK());
+          setOpenActionMenu(false);
         },
         matches: {
           deleted: false,
         },
       },
       {
-        title: 'Xoá sách vĩnh viễn',
+        title: 'Khôi phục (bỏ xoá) sách',
         onClick: () => {
-          console.log('delete book');
+          dispatch(ENABLE_BOOK());
+          setOpenActionMenu(false);
         },
         matches: {
           deleted: true,
         },
       },
+      {
+        title: 'Xoá sách vĩnh viễn',
+        onClick: () => {
+          dispatch(REMOVE_BOOK());
+          setOpenActionMenu(false);
+        },
+        matches: {
+          deleted: true,
+        },
+      },
+
     ],
     [],
   );
@@ -159,8 +180,8 @@ export default function Books(props: any) {
       { field: 'name', headerName: 'Tên sách', flex: 1 },
       { field: 'author', headerName: 'Tác giả', width: 150 },
       { field: 'category', headerName: 'Danh mục', width: 150 },
-      { field: 'purchase_count', headerName: 'Lượt mua', width: 120 },
-      { field: 'view_count', headerName: 'Lượt xem', width: 120 },
+      { field: 'purchaseCount', headerName: 'Lượt mua', width: 120 },
+      { field: 'viewCount', headerName: 'Lượt xem', width: 120 },
       { field: 'quantity', headerName: 'Số lượng', width: 120 },
       { field: 'price', headerName: 'Đơn giá', width: 150 },
 
@@ -175,7 +196,7 @@ export default function Books(props: any) {
               color="inherit"
               aria-label="open action"
               onClick={(event: React.MouseEvent) => {
-                setSelectedRowValue(params.row);
+                dispatch(setDataGridSelectedRow(params.row));
                 setActionMenuAnchor(params.element as HTMLElement);
                 setOpenActionMenu(true);
               }}
@@ -193,9 +214,8 @@ export default function Books(props: any) {
       label: 'Mặc định',
       value: 'default',
       onClick: () => {
-        setQueryState({
-          ...queryState,
-          selectedTab: 'default',
+        changeQueryState({
+          filter: 'default',
         });
       },
     },
@@ -203,9 +223,8 @@ export default function Books(props: any) {
       label: 'Bị xoá (ẩn)',
       value: 'deleted',
       onClick: () => {
-        setQueryState({
-          ...queryState,
-          selectedTab: 'deleted',
+        changeQueryState({
+          filter: 'deleted',
         });
       },
     },
@@ -228,19 +247,22 @@ export default function Books(props: any) {
               </Typography>
             </Grid>
             <Grid item xs="auto">
-              <IconButton edge="start" color="inherit" aria-label="refresh page" onClick={() => console.log('refresh')}>
+              <IconButton
+                edge="start"
+                color="inherit"
+                aria-label="refresh page"
+                onClick={() => dispatch(FETCH_BOOKS())}
+              >
                 <ReplayIcon />
               </IconButton>
               <Button
                 variant="contained"
                 color="primary"
                 endIcon={<Icon>add</Icon>}
-                onClick={() =>
-                  setOpenBookModal({
-                    open: true,
-                    mode: 'new',
-                  })
-                }
+                onClick={() => {
+                  dispatch(setModalMode('new'));
+                  dispatch(setOpenModal(true));
+                }}
               >
                 Thêm mới
               </Button>
@@ -251,7 +273,7 @@ export default function Books(props: any) {
           <Grid item xs={12}>
             <Grid container spacing={1} alignItems="center">
               <Grid item xs={12} sm={true}>
-                <Tabs value={selectedTab} indicatorColor="primary" textColor="primary">
+                <Tabs value={filter} indicatorColor="primary" textColor="primary">
                   {tabs.map(({ label, value, onClick }, index) => (
                     <Tab key={index} label={label} value={value} onClick={onClick} />
                   ))}
@@ -261,17 +283,16 @@ export default function Books(props: any) {
                 <div className={classes.search}>
                   <InputBase
                     placeholder="Search…"
-                    value={searchInputValue}
+                    value={searchValue}
                     onKeyUp={(event: React.KeyboardEvent) => {
                       if (event.key === 'Enter') {
-                        setQueryState({
-                          ...queryState,
-                          searchInput: searchInputValue,
+                        changeQueryState({
+                          search: searchValue,
                         });
                       }
                     }}
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                      setSearchInputValue(event.target.value);
+                      setsearchValue(event.target.value);
                     }}
                     classes={{
                       root: classes.inputRoot,
@@ -286,9 +307,8 @@ export default function Books(props: any) {
                       color="inherit"
                       aria-label="refresh page"
                       onClick={() =>
-                        setQueryState({
-                          ...queryState,
-                          searchInput: searchInputValue,
+                        changeQueryState({
+                          search: searchValue,
                         })
                       }
                     >
@@ -300,7 +320,7 @@ export default function Books(props: any) {
             </Grid>
           </Grid>
           <Grid item xs={12}>
-            {!!dataGridRows.length && (
+            {!!rows.length && (
               <Paper elevation={1} style={{ padding: 10 }}>
                 <div style={{ flex: 1 }}>
                   <DataGrid
@@ -308,20 +328,18 @@ export default function Books(props: any) {
                     paginationMode="server"
                     ref={dataGridRef}
                     autoHeight
-                    rows={dataGridRows}
+                    rows={rows}
                     columns={cols}
-                    page={currentPage - 1}
-                    pageSize={rowsPerPage}
+                    page={page - 1}
+                    pageSize={limit}
                     onPageChange={(param: GridPageChangeParams) => {
-                      setQueryState({
-                        ...queryState,
-                        currentPage: param.page + 1,
+                      changeQueryState({
+                        page: param.page + 1,
                       });
                     }}
                     onPageSizeChange={(param: GridPageChangeParams) => {
-                      setQueryState({
-                        ...queryState,
-                        rowsPerPage: param.pageSize,
+                      changeQueryState({
+                        limit: param.pageSize,
                       });
                     }}
                     rowsPerPageOptions={[5, 10, 20]}
@@ -334,13 +352,13 @@ export default function Books(props: any) {
                     open={openActionMenu}
                     onClose={() => setOpenActionMenu(false)}
                   >
-                    {seletedRowValue &&
+                    {selectedRow &&
                       actionMenuItems &&
                       actionMenuItems.map(({ title, onClick, matches }, index) =>
                         !matches ||
                         (!!matches &&
                           Object.keys(matches)
-                            .map((key: any) => matches[key] === seletedRowValue[key])
+                            .map((key: any) => matches[key] === selectedRow[key])
                             .every((value) => !!value)) ? (
                           <MenuItem key={index} onClick={onClick}>
                             {title}
@@ -348,14 +366,7 @@ export default function Books(props: any) {
                         ) : null,
                       )}
                   </Menu>
-                  {openBookModal && (
-                    <BookModal
-                      mode={openBookModal.mode}
-                      open={openBookModal.open}
-                      setMode={setOpenBookModal}
-                      item={seletedRowValue}
-                    ></BookModal>
-                  )}
+                  {openModal && <BookModal></BookModal>}
                 </div>
               </Paper>
             )}
