@@ -18,18 +18,19 @@ import {
   Grid,
   Button,
   Icon,
+  Avatar
 } from '@material-ui/core';
 import { MoreHoriz as MoreHorizIcon, Replay as ReplayIcon, Search as SearchIcon } from '@material-ui/icons';
 import { useTheme, fade, Theme, createStyles, makeStyles } from '@material-ui/core/styles';
 import { DataGrid, GridCellParams, GridRowData, GridPageChangeParams } from '@material-ui/data-grid';
 import { BrowserRouter as Router, Switch, Route, useHistory, useLocation } from 'react-router-dom';
 
+import numeral from 'numeral';
+
 import BookModal from 'components/Dashboard/BookModal';
 import parseQueries from 'helpers/parseQueries';
 
 import useStyles from 'styles/Dashboard/common';
-// import rows from './rows';
-// import detail from './detail';
 import { RootState } from 'stores/store';
 import { useSelector, useDispatch } from 'react-redux';
 import {
@@ -49,6 +50,9 @@ import {
   DISABLE_BOOK,
   ENABLE_BOOK,
 } from 'reducers/dashboard/books';
+
+
+const BASE_URL = process.env.REACT_APP_BASE_URL;
 
 export default function Books(props: any) {
   const { query, rows, rowCount, selectedRow, openModal } = useSelector((state: RootState) => state.dashboard);
@@ -75,12 +79,14 @@ export default function Books(props: any) {
     console.log('DID mount');
     const { filter, page, limit, search } = getQueries();
     setsearchValue(search);
-    setQueryState({
-      filter: filter,
-      page: page,
-      limit: limit,
-      search: search,
-    });
+    dispatch(
+      setQueryState({
+        filter: filter,
+        page: page,
+        limit: limit,
+        search: search,
+      }),
+    );
     dispatch(FETCH_BOOKS());
   }, []);
   useNonInitialEffect(() => {
@@ -109,12 +115,14 @@ export default function Books(props: any) {
     console.log('history changed');
     const { filter, page, limit, search } = getQueries();
     setsearchValue(search);
-    setQueryState({
-      filter: filter,
-      page: page,
-      limit: limit,
-      search: search,
-    });
+    dispatch(
+      setQueryState({
+        filter: filter,
+        page: page,
+        limit: limit,
+        search: search,
+      }),
+    );
     dispatch(FETCH_BOOKS());
   }, [location.search]);
 
@@ -181,7 +189,6 @@ export default function Books(props: any) {
           deleted: true,
         },
       },
-
     ],
     [],
   );
@@ -189,12 +196,25 @@ export default function Books(props: any) {
     () => [
       { field: 'id', headerName: 'Mã', width: 100 },
       { field: 'name', headerName: 'Tên sách', flex: 1 },
+      {
+        field: 'image',
+        headerName: 'Ảnh',
+        width: 80,
+        renderCell: (params: GridCellParams) => (
+          <Avatar variant="square" src={params.value && params.value.toString().startsWith('http') ? '' : BASE_URL as string + params.value}>img</Avatar>
+        ),
+      },
       { field: 'author', headerName: 'Tác giả', width: 150 },
       { field: 'category', headerName: 'Danh mục', width: 150 },
       { field: 'purchaseCount', headerName: 'Lượt mua', width: 120 },
       { field: 'viewCount', headerName: 'Lượt xem', width: 120 },
-      { field: 'quantity', headerName: 'Số lượng', width: 120 },
-      { field: 'price', headerName: 'Đơn giá', width: 150 },
+      { field: 'quantity', headerName: 'Số lượng', width: 110 },
+      {
+        field: 'price',
+        headerName: 'Đơn giá',
+        width: 120,
+        renderCell: (params: GridCellParams) => <span>{params.value && numeral(params.value).format('0,0')}</span>,
+      },
 
       {
         field: 'action',
@@ -335,7 +355,7 @@ export default function Books(props: any) {
               <Paper elevation={1} style={{ padding: 10 }}>
                 <div style={{ flex: 1 }}>
                   <DataGrid
-                    rowCount={100}
+                    rowCount={rowCount}
                     paginationMode="server"
                     ref={dataGridRef}
                     autoHeight

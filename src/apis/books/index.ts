@@ -28,7 +28,7 @@ export const get = (id: string) => {
 export const create = ({
   name,
   description,
-  imageurl,
+  imageUrl,
   pages,
   weight,
   publishDay,
@@ -41,7 +41,7 @@ export const create = ({
 }: {
   name: string;
   description: string;
-  imageurl?: string;
+  imageUrl?: string;
   pages: number;
   weight: number;
   publishDay: string;
@@ -58,7 +58,7 @@ export const create = ({
     data: {
       name,
       description,
-      imageurl,
+      imageUrl,
       pages,
       weight,
       publishDay,
@@ -77,7 +77,7 @@ export const edit = ({
   id,
   name,
   description,
-  imageurl,
+  imageUrl,
   pages,
   weight,
   publishDay,
@@ -91,7 +91,7 @@ export const edit = ({
   id: string;
   name: string;
   description: string;
-  imageurl?: string;
+  imageUrl?: string;
   pages: number;
   weight: number;
   publishDay: string;
@@ -109,7 +109,7 @@ export const edit = ({
       id,
       name,
       description,
-      imageurl,
+      imageUrl,
       pages,
       weight,
       publishDay,
@@ -148,4 +148,13 @@ export const remove = (id: string) => {
   return Axios(config);
 };
 
+export const uploadCover = (data: FormData) => {
+  let config: AxiosRequestConfig = {
+    method: 'post',
+    url: `/api/Upload/BookImage`,
+    headers: { 'Content-Type': 'multipart/form-data' },
+    data: data,
+  };
+  return Axios(config);
+};
 // export default getBooks;

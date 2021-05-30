@@ -47,7 +47,7 @@ export const CREATE_BOOK =
   (params: {
     name: string;
     description: string;
-    imageurl?: string;
+    imageUrl?: string;
     pages: number;
     weight: number;
     publishDay: string;
@@ -80,7 +80,7 @@ export const EDIT_BOOK =
     id: string;
     name: string;
     description: string;
-    imageurl?: string;
+    imageUrl?: string;
     pages: number;
     weight: number;
     publishDay: string;

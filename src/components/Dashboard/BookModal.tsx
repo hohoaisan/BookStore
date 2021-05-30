@@ -21,6 +21,7 @@ import {
   Radio,
   Select,
   MenuItem,
+  Avatar,
 } from '@material-ui/core';
 import { DataGrid, GridCellParams, GridRowData, GridPageChangeParams } from '@material-ui/data-grid';
 
@@ -36,11 +37,12 @@ import {
 import { FETCH_BOOKS, FETCH_BOOK, CREATE_BOOK, EDIT_BOOK, REMOVE_BOOK, ENABLE_BOOK } from 'reducers/dashboard/books';
 import { getAll as getAuthors } from 'apis/author/index';
 import { getAll as getCategories } from 'apis/categories/index';
+import { uploadCover } from 'apis/books';
 
 const initValue = {
   id: '',
   name: '',
-  imageurl: '',
+  imageUrl: '',
   author: '',
   category: '',
   pages: 0,
@@ -52,6 +54,7 @@ const initValue = {
   price: 0,
   description: '',
 };
+const BASE_URL = process.env.REACT_APP_BASE_URL;
 
 function CustomModal() {
   const dispatch = useDispatch();
@@ -81,7 +84,7 @@ function CustomModal() {
               id,
               name,
               description,
-              imageurl,
+              imageUrl,
               pages,
               weight,
               publishDay,
@@ -108,7 +111,7 @@ function CustomModal() {
             const {
               name,
               description,
-              imageurl,
+              imageUrl,
               pages,
               weight,
               publishDay,
@@ -137,7 +140,7 @@ function CustomModal() {
         id,
         name,
         description,
-        imageurl,
+        imageUrl,
         pages,
         weight,
         publishDay,
@@ -152,7 +155,7 @@ function CustomModal() {
         id,
         name,
         description,
-        imageurl,
+        imageUrl,
         pages: Number.parseInt(pages),
         weight: Number.parseInt(weight),
         publishDay: publishDay ? new Date(publishDay).toISOString().split('T')[0] : '',
@@ -181,6 +184,7 @@ function CustomModal() {
     getAuthors({ filter: 'default', page: 1, limit: 1000000 }).then((res) => setAuthors(res.data.rows));
     getCategories({ filter: 'default', page: 1, limit: 1000000 }).then((res) => setCategories(res.data.rows));
   }, []);
+
   const disabled = modalMode === 'view';
   const modalCloseHandler = () => {
     dispatch(setOpenModal(false));
@@ -194,233 +198,288 @@ function CustomModal() {
       maxWidth="md"
       fullWidth={true}
     >
-      <form onSubmit={formik.handleSubmit}>
-        <DialogTitle id="form-dialog-title">{title}</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={3} md={2}>
-              <Typography variant="body1" component="span">
-                Tên sách
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={9} md={4}>
-              <TextField
-                id="name"
-                name="name"
-                disabled={disabled}
-                value={formik.values.name}
-                onChange={formik.handleChange}
-                error={formik.touched.name && Boolean(formik.errors.name)}
-                helperText={formik.touched.name && formik.errors.name}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12} sm={3} md={2}>
-              <Typography variant="body1" component="span">
-                Tác giả
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={9} md={4}>
-              <Select
-                id="author"
-                name="author"
-                disabled={disabled}
-                value={formik.values.author}
-                onChange={formik.handleChange}
-                fullWidth
-              >
-                {authors &&
-                  authors.map(({ id, name }, index) => (
-                    <MenuItem key={index} value={id}>
-                      {name}
-                    </MenuItem>
-                  ))}
-              </Select>
-            </Grid>
-            <Grid item xs={12} sm={3} md={2}>
-              <Typography variant="body1" component="span">
-                Số trang
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={9} md={4}>
-              <TextField
-                id="pages"
-                name="pages"
-                type="number"
-                disabled={disabled}
-                value={formik.values.pages}
-                onChange={formik.handleChange}
-                error={formik.touched.pages && Boolean(formik.errors.pages)}
-                helperText={formik.touched.pages && formik.errors.pages}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12} sm={3} md={2}>
-              <Typography variant="body1" component="span">
-                Danh mục
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={9} md={4}>
-              <Select
-                id="category"
-                name="category"
-                disabled={disabled}
-                value={formik.values.category}
-                onChange={formik.handleChange}
-                fullWidth
-              >
-                {categories &&
-                  categories.map(({ id, name }, index) => (
-                    <MenuItem key={index} value={id}>
-                      {name}
-                    </MenuItem>
-                  ))}
-              </Select>
-            </Grid>
-            <Grid item xs={12} sm={3} md={2}>
-              <Typography variant="body1" component="span">
-                Trọng lượng(g)
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={9} md={4}>
-              <TextField
-                id="weight"
-                name="weight"
-                type="number"
-                disabled={disabled}
-                value={formik.values.weight}
-                onChange={formik.handleChange}
-                error={formik.touched.weight && Boolean(formik.errors.weight)}
-                helperText={formik.touched.weight && formik.errors.weight}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12} sm={3} md={2}>
-              <Typography variant="body1" component="span">
-                Loại bìa
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={9} md={4}>
-              <TextField
-                id="cover"
-                name="cover"
-                disabled={disabled}
-                value={formik.values.cover}
-                onChange={formik.handleChange}
-                error={formik.touched.cover && Boolean(formik.errors.cover)}
-                helperText={formik.touched.cover && formik.errors.cover}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12} sm={3} md={2}>
-              <Typography variant="body1" component="span">
-                Nhà phát hành
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={9} md={4}>
-              <TextField
-                id="publisher"
-                name="publisher"
-                disabled={disabled}
-                value={formik.values.publisher}
-                onChange={formik.handleChange}
-                error={formik.touched.publisher && Boolean(formik.errors.publisher)}
-                helperText={formik.touched.publisher && formik.errors.publisher}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12} sm={3} md={2}>
-              <Typography variant="body1" component="span">
-                Ngày phát hành
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={9} md={4}>
-              <TextField
-                id="publishDay"
-                name="publishDay"
-                disabled={disabled}
-                type="date"
-                value={formik.values.publishDay}
-                onChange={formik.handleChange}
-                error={formik.touched.publishDay && Boolean(formik.errors.publishDay)}
-                helperText={formik.touched.publishDay && formik.errors.publishDay}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12} sm={3} md={2}>
-              <Typography variant="body1" component="span">
-                Số lượng
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={9} md={4}>
-              <TextField
-                id="quantity"
-                name="quantity"
-                type="number"
-                disabled={disabled}
-                value={formik.values.quantity}
-                onChange={formik.handleChange}
-                error={formik.touched.quantity && Boolean(formik.errors.quantity)}
-                helperText={formik.touched.quantity && formik.errors.quantity}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12} sm={3} md={2}>
-              <Typography variant="body1" component="span">
-                Đơn giá
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={9} md={4}>
-              <TextField
-                id="price"
-                name="price"
-                disabled={disabled}
-                type="number"
-                value={formik.values.price}
-                onChange={formik.handleChange}
-                error={formik.touched.price && Boolean(formik.errors.price)}
-                helperText={formik.touched.price && formik.errors.price}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12} sm={3} md={2}>
-              <Typography variant="body1" component="span">
-                Mô tả về sách
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={9} md={10}>
-              <TextField
-                id="description"
-                name="description"
-                rows={4}
-                rowsMax={10}
-                multiline={true}
-                disabled={disabled}
-                value={formik.values.description}
-                onChange={formik.handleChange}
-                error={formik.touched.description && Boolean(formik.errors.description)}
-                helperText={formik.touched.description && formik.errors.description}
-                fullWidth
-              />
+      <DialogTitle id="form-dialog-title">{title}</DialogTitle>
+      <DialogContent>
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Grid container justify="center" alignItems="center" spacing={2}>
+              <Grid item>
+                <Avatar
+                  imgProps={{ style: { objectFit: 'contain' } }}
+                  src={
+                    formik.values.imageUrl && formik.values.imageUrl.startsWith('http')
+                      ? ''
+                      : (BASE_URL as string) + formik.values.imageUrl
+                  }
+                  style={{ width: 200, height: 200 }}
+                  variant="square"
+                >
+                  Chưa có ảnh
+                </Avatar>
+              </Grid>
+              {!disabled && (
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    let form = new FormData(event.target as HTMLFormElement);
+                    uploadCover(form)
+                      .then((res) => {
+                        const path = res.data.path;
+                        formik.setValues({
+                          ...formik.values,
+                          imageUrl: path,
+                        });
+                      })
+                      .catch((err) => console.log(err));
+                  }}
+                >
+                  <Grid item>
+                    <Grid container spacing={2} justify="center">
+                      <Grid item xs={12}>
+                        <Button variant="contained" component="label" fullWidth>
+                          Chọn ảnh
+                          <input type="file" name="file" hidden />
+                        </Button>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Button variant="contained" color="primary" fullWidth type="submit">
+                          Upload
+                        </Button>
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                </form>
+              )}
             </Grid>
           </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={modalCloseHandler} color="primary">
-            Huỷ
+          <Grid item xs={12}>
+            <form onSubmit={formik.handleSubmit}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={3} md={2}>
+                  <Typography variant="body1" component="span">
+                    Tên sách
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={9} md={4}>
+                  <TextField
+                    id="name"
+                    name="name"
+                    disabled={disabled}
+                    value={formik.values.name}
+                    onChange={formik.handleChange}
+                    error={formik.touched.name && Boolean(formik.errors.name)}
+                    helperText={formik.touched.name && formik.errors.name}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3} md={2}>
+                  <Typography variant="body1" component="span">
+                    Tác giả
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={9} md={4}>
+                  <Select
+                    id="author"
+                    name="author"
+                    disabled={disabled}
+                    value={formik.values.author}
+                    onChange={formik.handleChange}
+                    fullWidth
+                  >
+                    {authors &&
+                      authors.map(({ id, name }, index) => (
+                        <MenuItem key={index} value={id}>
+                          {name}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </Grid>
+                <Grid item xs={12} sm={3} md={2}>
+                  <Typography variant="body1" component="span">
+                    Số trang
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={9} md={4}>
+                  <TextField
+                    id="pages"
+                    name="pages"
+                    type="number"
+                    disabled={disabled}
+                    value={formik.values.pages}
+                    onChange={formik.handleChange}
+                    error={formik.touched.pages && Boolean(formik.errors.pages)}
+                    helperText={formik.touched.pages && formik.errors.pages}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3} md={2}>
+                  <Typography variant="body1" component="span">
+                    Danh mục
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={9} md={4}>
+                  <Select
+                    id="category"
+                    name="category"
+                    disabled={disabled}
+                    value={formik.values.category}
+                    onChange={formik.handleChange}
+                    fullWidth
+                  >
+                    {categories &&
+                      categories.map(({ id, name }, index) => (
+                        <MenuItem key={index} value={id}>
+                          {name}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </Grid>
+                <Grid item xs={12} sm={3} md={2}>
+                  <Typography variant="body1" component="span">
+                    Trọng lượng(g)
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={9} md={4}>
+                  <TextField
+                    id="weight"
+                    name="weight"
+                    type="number"
+                    disabled={disabled}
+                    value={formik.values.weight}
+                    onChange={formik.handleChange}
+                    error={formik.touched.weight && Boolean(formik.errors.weight)}
+                    helperText={formik.touched.weight && formik.errors.weight}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3} md={2}>
+                  <Typography variant="body1" component="span">
+                    Loại bìa
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={9} md={4}>
+                  <TextField
+                    id="cover"
+                    name="cover"
+                    disabled={disabled}
+                    value={formik.values.cover}
+                    onChange={formik.handleChange}
+                    error={formik.touched.cover && Boolean(formik.errors.cover)}
+                    helperText={formik.touched.cover && formik.errors.cover}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3} md={2}>
+                  <Typography variant="body1" component="span">
+                    Nhà phát hành
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={9} md={4}>
+                  <TextField
+                    id="publisher"
+                    name="publisher"
+                    disabled={disabled}
+                    value={formik.values.publisher}
+                    onChange={formik.handleChange}
+                    error={formik.touched.publisher && Boolean(formik.errors.publisher)}
+                    helperText={formik.touched.publisher && formik.errors.publisher}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3} md={2}>
+                  <Typography variant="body1" component="span">
+                    Ngày phát hành
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={9} md={4}>
+                  <TextField
+                    id="publishDay"
+                    name="publishDay"
+                    disabled={disabled}
+                    type="date"
+                    value={formik.values.publishDay}
+                    onChange={formik.handleChange}
+                    error={formik.touched.publishDay && Boolean(formik.errors.publishDay)}
+                    helperText={formik.touched.publishDay && formik.errors.publishDay}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3} md={2}>
+                  <Typography variant="body1" component="span">
+                    Số lượng
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={9} md={4}>
+                  <TextField
+                    id="quantity"
+                    name="quantity"
+                    type="number"
+                    disabled={disabled}
+                    value={formik.values.quantity}
+                    onChange={formik.handleChange}
+                    error={formik.touched.quantity && Boolean(formik.errors.quantity)}
+                    helperText={formik.touched.quantity && formik.errors.quantity}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3} md={2}>
+                  <Typography variant="body1" component="span">
+                    Đơn giá
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={9} md={4}>
+                  <TextField
+                    id="price"
+                    name="price"
+                    disabled={disabled}
+                    type="number"
+                    value={formik.values.price}
+                    onChange={formik.handleChange}
+                    error={formik.touched.price && Boolean(formik.errors.price)}
+                    helperText={formik.touched.price && formik.errors.price}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3} md={2}>
+                  <Typography variant="body1" component="span">
+                    Mô tả về sách
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={9} md={10}>
+                  <TextField
+                    id="description"
+                    name="description"
+                    rows={4}
+                    rowsMax={10}
+                    multiline={true}
+                    disabled={disabled}
+                    value={formik.values.description}
+                    onChange={formik.handleChange}
+                    error={formik.touched.description && Boolean(formik.errors.description)}
+                    helperText={formik.touched.description && formik.errors.description}
+                    fullWidth
+                  />
+                </Grid>
+              </Grid>
+            </form>
+          </Grid>
+        </Grid>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={modalCloseHandler} color="primary">
+          Huỷ
+        </Button>
+        {modalMode === 'view' && (
+          <Button color="primary" variant="contained" onClick={() => dispatch(setModalMode('edit'))}>
+            Chỉnh sửa
           </Button>
-          {modalMode === 'view' && (
-            <Button color="primary" variant="contained" onClick={() => dispatch(setModalMode('edit'))}>
-              Chỉnh sửa
-            </Button>
-          )}
-          {modalMode !== 'view' && (
-            <Button color="primary" variant="contained" type="submit">
-              Lưu
-            </Button>
-          )}
-        </DialogActions>
-      </form>
+        )}
+        {modalMode !== 'view' && (
+          <Button color="primary" variant="contained" onClick={() => formik.submitForm()}>
+            Lưu
+          </Button>
+        )}
+      </DialogActions>
     </Dialog>
   );
 }
