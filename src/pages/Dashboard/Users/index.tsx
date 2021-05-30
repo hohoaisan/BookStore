@@ -78,12 +78,14 @@ export default function User(props: any) {
     console.log('DID mount');
     const { filter, page, limit, search } = getQueries();
     setsearchValue(search);
-    setQueryState({
-      filter: filter,
-      page: page,
-      limit: limit,
-      search: search,
-    });
+    dispatch(
+      setQueryState({
+        filter: filter,
+        page: page,
+        limit: limit,
+        search: search,
+      }),
+    );
     dispatch(FETCH_USERS());
   }, []);
 
@@ -113,12 +115,14 @@ export default function User(props: any) {
     console.log('history changed');
     const { filter, page, limit, search } = getQueries();
     setsearchValue(search);
-    setQueryState({
-      filter: filter,
-      page: page,
-      limit: limit,
-      search: search,
-    });
+    dispatch(
+      setQueryState({
+        filter: filter,
+        page: page,
+        limit: limit,
+        search: search,
+      }),
+    );
     dispatch(FETCH_USERS());
   }, [location.search]);
 
