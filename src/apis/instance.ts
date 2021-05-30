@@ -2,10 +2,10 @@ import axios, { AxiosRequestConfig, ResponseType, AxiosError } from 'axios';
 import { logout } from 'reducers/auth';
 import Store, { RootState } from 'stores/store';
 import { toast } from 'react-toastify';
-const baseURL = 'https://localhost:44326';
+const BASE_URL = process.env.REACT_APP_BASE_URL;
 
 export const config: AxiosRequestConfig = {
-  baseURL,
+  baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
