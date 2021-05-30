@@ -8,7 +8,9 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.min.css';
 
 import { Provider as ReduxProvider } from 'react-redux';
-import store from 'stores/store';
+import { PersistGate } from 'redux-persist/integration/react';
+import store, {persistor} from 'stores/store';
+
 import Axios, { initAxiosInterceptors } from 'apis/instance';
 
 import Home from 'pages/Home';
@@ -55,39 +57,41 @@ function App() {
   );
   return (
     <ReduxProvider store={store}>
-      <ThemeProvider theme={theme}>
-        <div className="App">
-          <CssBaseline />
-          <Router>
-            <Switch>
-              {routes.map(({ path, Component, options, isProtected }, index) =>
-                isProtected ? (
-                  <ProtectedRoute path={path} {...options} key={index}>
-                    <Component />
-                  </ProtectedRoute>
-                ) : (
-                  <Route path={path} {...options} key={index}>
-                    <Component />
-                  </Route>
-                ),
-              )}
-            </Switch>
-          </Router>
-        </div>
-      </ThemeProvider>
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
-      {/* Same as */}
-      <ToastContainer />
+      <PersistGate loading={null} persistor={persistor}>
+        <ThemeProvider theme={theme}>
+          <div className="App">
+            <CssBaseline />
+            <Router>
+              <Switch>
+                {routes.map(({ path, Component, options, isProtected }, index) =>
+                  isProtected ? (
+                    <ProtectedRoute path={path} {...options} key={index}>
+                      <Component />
+                    </ProtectedRoute>
+                  ) : (
+                    <Route path={path} {...options} key={index}>
+                      <Component />
+                    </Route>
+                  ),
+                )}
+              </Switch>
+            </Router>
+          </div>
+        </ThemeProvider>
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+        />
+        {/* Same as */}
+        <ToastContainer />
+      </PersistGate>
     </ReduxProvider>
   );
 }

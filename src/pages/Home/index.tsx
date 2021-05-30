@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useNonInitialEffect from 'hooks/useNonInitialEffect';
-import { BrowserRouter as Router, Switch, Route, Link, useHistory, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Switch, Route, Link, useHistory, useLocation, Redirect } from 'react-router-dom';
 import { HelpOutlineOutlined } from '@material-ui/icons';
 
 import Auth from 'components/Auth/Auth';
@@ -27,13 +27,6 @@ function Test() {
   );
 }
 function Index() {
-  return (
-    <div className="Index">
-      <p>this is home page</p>
-      <Auth />
-      <Link to="/dashboard" />
-      <Test />
-    </div>
-  );
+  return <Redirect to="/dashboard" />;
 }
 export default Index;

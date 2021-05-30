@@ -56,7 +56,7 @@ const Login = () => {
               <>
                 <Grid item xs={12}>
                   <Typography align="center">Bạn đã đăng nhập, bạn có muốn đăng xuất?</Typography>
-                  <Link to="/dashboard">go to dashboard</Link>
+                  <Link to="/">Về trang chủ</Link>
                 </Grid>
                 <Grid item xs={12}>
                   <Button color="primary" variant="contained" fullWidth size="large" onClick={() => dispatch(logout())}>

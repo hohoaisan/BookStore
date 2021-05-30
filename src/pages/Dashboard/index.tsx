@@ -86,6 +86,9 @@ function Dasboard() {
     },
     [isBelowSm],
   );
+  // useEffect(() => {
+  //   history.push('/orders');
+  // }, []);
   return (
     <div className={classes.root}>
       <AppBar position="fixed" className={classes.appBar}>
