@@ -18,39 +18,41 @@ import {
   Grid,
 } from '@material-ui/core';
 import { MoreHoriz as MoreHorizIcon, Replay as ReplayIcon, Search as SearchIcon } from '@material-ui/icons';
-import { useTheme, fade, Theme, createStyles, makeStyles } from '@material-ui/core/styles';
 import { DataGrid, GridCellParams, GridRowData, GridPageChangeParams } from '@material-ui/data-grid';
 import { BrowserRouter as Router, Switch, Route, useHistory, useLocation } from 'react-router-dom';
 
-import OrderDataGridRow from 'interfaces/Dashboard/OrderDataGridRow';
-import OrderDetail from 'interfaces/Dashboard/OrderDetail';
 import parseQueries from 'helpers/parseQueries';
 
 import OrderDetailModal from 'components/Dashboard/OrderDetailModal';
 import useStyles from 'styles/Dashboard/common';
-import rows from './rows';
-import detail from './detail';
+import numeral from 'numeral';
+
+import { RootState } from 'stores/store';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  setQueryState,
+  setDataGridRow,
+  setDataGridSelectedRow,
+  setOpenModal,
+  setModalMode,
+} from 'reducers/dashboard/dashboard';
+
+import {
+  FETCH_ORDERS,
+  ACCEPT_ORDER,
+  REJECT_ORDER,
+  MARK_COMPLETED_ORDER,
+  MARK_ERROR_ORDER,
+} from 'reducers/dashboard/orders';
 
 export default function Order(props: any) {
-  const [queryState, setQueryState] = useState<{
-    selectedTab: string;
-    currentPage: number;
-    rowsPerPage: number;
-    searchInput: string | undefined;
-  }>({
-    selectedTab: 'all',
-    currentPage: 1,
-    rowsPerPage: 10,
-    searchInput: undefined,
-  });
-  const { selectedTab, currentPage, rowsPerPage, searchInput } = queryState;
-  const [searchInputValue, setSearchInputValue] = useState<string | undefined>('');
-  const [dataGridRows, setDataGridRows] = useState<OrderDataGridRow[]>(rows);
+  const { query, rows, rowCount, selectedRow, openModal } = useSelector((state: RootState) => state.dashboard);
+  const { filter, page, limit, search } = query;
+  const dispatch = useDispatch();
+
+  const [searchValue, setSearchInputValue] = useState<string | undefined>('');
   const [openActionMenu, setOpenActionMenu] = useState(false);
   const [actionMenuAnchor, setActionMenuAnchor] = useState<null | HTMLElement>(null);
-  const [seletedRowValue, setSelectedRowValue] = useState<GridRowData | null>(null);
-  const [openModal, setOpenModal] = useState(false);
-  const [modalOrderDetail, setModalOrderDetail] = useState<null | OrderDetail>(detail);
 
   const classes = useStyles();
   const history = useHistory();
@@ -58,10 +60,10 @@ export default function Order(props: any) {
   const dataGridRef = useRef<HTMLDivElement>(null);
   const getQueries = useCallback(() => {
     return parseQueries(location.search, {
-      filter: selectedTab,
+      filter: filter,
       search: undefined,
-      page: currentPage,
-      limit: rowsPerPage,
+      page: page,
+      limit: limit,
     });
   }, [location.search]);
   useEffect(function () {
@@ -69,60 +71,96 @@ export default function Order(props: any) {
     const { filter, page, limit, search } = getQueries();
     setSearchInputValue(search);
     setQueryState({
-      selectedTab: filter,
-      currentPage: page,
-      rowsPerPage: limit,
-      searchInput: search,
+      filter: filter,
+      page: page,
+      limit: limit,
+      search: search,
     });
-    console.log('Fetch data go br br', filter, page, limit);
+    dispatch(FETCH_ORDERS());
   }, []);
   useNonInitialEffect(() => {
     history.push({
       search: qs.stringify({
-        filter: selectedTab,
-        page: currentPage,
-        limit: rowsPerPage,
-        search: searchInput,
+        filter: filter,
+        page: 1,
+        limit: 10,
+        search: search,
       }),
     });
-  }, [selectedTab, currentPage, rowsPerPage, searchInput]);
+  }, [filter]);
+  useNonInitialEffect(() => {
+    history.push({
+      search: qs.stringify({
+        filter: filter,
+        page: page,
+        limit: limit,
+        search: search,
+      }),
+    });
+  }, [page, limit, search]);
 
   useNonInitialEffect(() => {
     console.log('history changed');
     const { filter, page, limit, search } = getQueries();
     setSearchInputValue(search);
     setQueryState({
-      selectedTab: filter,
-      currentPage: page,
-      rowsPerPage: limit,
-      searchInput: search,
+      filter: filter,
+      page: page,
+      limit: limit,
+      search: search,
     });
-    console.log('Fetch data go br br', selectedTab, currentPage, rowsPerPage);
+    dispatch(FETCH_ORDERS());
   }, [location.search]);
+  const changeQueryState = (item: object) => {
+    dispatch(
+      setQueryState({
+        ...query,
+        ...item,
+      }),
+    );
+  };
+
   const actionMenuItems = React.useMemo(
     () => [
       {
         title: 'Xem thông tin chi tiết đơn hàng',
         onClick: () => {
           setOpenActionMenu(false);
-          setOpenModal(true);
+          dispatch(setOpenModal(true));
         },
-        matches: ['completed', 'pending', 'error', 'rejected', 'unpaid'],
+        matches: ['c', 'p', 'e', 'r', 'a'],
       },
       {
         title: 'Tiếp nhận',
-        onClick: () => console.log('clicked'),
-        matches: ['pending'],
+        onClick: () => {
+          setOpenActionMenu(false);
+          dispatch(ACCEPT_ORDER());
+        },
+        matches: ['p'],
       },
       {
         title: 'Từ chối',
-        onClick: () => console.log('clicked'),
-        matches: ['pending'],
+        onClick: () => {
+          setOpenActionMenu(false);
+          dispatch(REJECT_ORDER());
+        },
+        matches: ['p'],
       },
       {
         title: 'Đánh dấu là lỗi',
-        onClick: () => console.log('clicked'),
-        matches: ['pending', 'rejected', 'unpaid'],
+        onClick: () => {
+          dispatch(MARK_ERROR_ORDER());
+          setOpenActionMenu(false);
+        },
+        matches: ['p', 'r', 'a'],
+      },
+      {
+        title: 'Đánh dấu là hoàn thành',
+        onClick: () => {
+          setOpenActionMenu(false);
+          dispatch(MARK_COMPLETED_ORDER());
+        },
+        matches: ['a'],
       },
     ],
     [],
@@ -130,14 +168,46 @@ export default function Order(props: any) {
   const cols = React.useMemo(
     () => [
       // { field: 'id', headerName: 'ID', width: 150 },
-      { field: 'status', headerName: 'Trạng thái', width: 150 },
-      { field: 'date', headerName: 'Ngày mua', width: 100, flex: 1 },
-      { field: 'orderer', headerName: 'Người mua', width: 150 },
+      {
+        field: 'status',
+        headerName: 'Trạng thái',
+        width: 150,
+        renderCell: (params: GridCellParams) =>
+          params.value === 'p' ? (
+            <Typography color="primary">Chờ xác nhận</Typography>
+          ) : params.value === 'e' ? (
+            <Typography color="error">Đơn lỗi</Typography>
+          ) : params.value === 'r' ? (
+            <Typography color="error">Từ chối</Typography>
+          ) : params.value === 'c' ? (
+            <Typography color="textSecondary">Hoàn thành</Typography>
+          ) : params.value === 'a' ? (
+            <Typography color="primary">Chờ thanh toán</Typography>
+          ) : (
+            <Typography color="textSecondary">Không xác định</Typography>
+          ),
+      },
+      { field: 'id', headerName: 'Mã đơn', width: 110 },
+      {
+        field: 'timestamp',
+        headerName: 'Ngày mua',
+        width: 100,
+        flex: 1,
+        renderCell: (params: GridCellParams) => (
+          <span>{params.value && new Date(params.value as string).toLocaleString()}</span>
+        ),
+      },
+      { field: 'user', headerName: 'Người mua', width: 150 },
       { field: 'receiver', headerName: 'Người nhận', width: 150 },
-      { field: 'delivery_method', headerName: 'H.T.G.hàng', width: 120 },
-      { field: 'payment_method', headerName: 'H.T.T.toán', width: 120 },
-      { field: 'total_items', headerName: 'Số sản phẩm', width: 120 },
-      { field: 'total', headerName: 'Tổng cộng', width: 120 },
+      // { field: 'shipping', headerName: 'H.T.G.hàng', width: 120 },
+      // { field: 'payment', headerName: 'H.T.T.toán', width: 120 },
+      { field: 'totalItems', headerName: 'Số sản phẩm', width: 120 },
+      {
+        field: 'total',
+        headerName: 'Tổng cộng',
+        width: 120,
+        renderCell: (params: GridCellParams) => <span>{params.value && numeral(params.value).format('0,0')}</span>,
+      },
       {
         field: 'action',
         headerName: 'Action',
@@ -149,7 +219,7 @@ export default function Order(props: any) {
               color="inherit"
               aria-label="open action"
               onClick={(event: React.MouseEvent) => {
-                setSelectedRowValue(params.row);
+                dispatch(setDataGridSelectedRow(params.row));
                 setActionMenuAnchor(params.element as HTMLElement);
                 setOpenActionMenu(true);
                 //fetch data for detail
@@ -166,11 +236,10 @@ export default function Order(props: any) {
   const tabs = [
     {
       label: 'Tất cả',
-      value: 'all',
+      value: 'default',
       onClick: () => {
-        setQueryState({
-          ...queryState,
-          selectedTab: 'all',
+        changeQueryState({
+          filter: 'default',
         });
       },
     },
@@ -178,29 +247,44 @@ export default function Order(props: any) {
       label: 'Chờ xác nhận',
       value: 'pending',
       onClick: () => {
-        setQueryState({
-          ...queryState,
-          selectedTab: 'pending',
+        changeQueryState({
+          filter: 'pending',
         });
       },
     },
     {
       label: 'Chờ thanh toán',
-      value: 'unpaid',
+      value: 'accepted',
       onClick: () => {
-        setQueryState({
-          ...queryState,
-          selectedTab: 'unpaid',
+        changeQueryState({
+          filter: 'accepted',
         });
       },
     },
     {
-      label: 'Đơn hàng lỗi',
+      label: 'Từ chối',
+      value: 'rejected',
+      onClick: () => {
+        changeQueryState({
+          filter: 'rejected',
+        });
+      },
+    },
+    {
+      label: 'Đơn lỗi',
       value: 'error',
       onClick: () => {
-        setQueryState({
-          ...queryState,
-          selectedTab: 'error',
+        changeQueryState({
+          filter: 'error',
+        });
+      },
+    },
+    {
+      label: 'Hoàn thành',
+      value: 'completed',
+      onClick: () => {
+        changeQueryState({
+          filter: 'completed',
         });
       },
     },
@@ -233,22 +317,21 @@ export default function Order(props: any) {
           <Grid item xs={12}>
             <Grid container spacing={1} alignItems="center">
               <Grid item xs={12} sm={true}>
-                <Tabs value={selectedTab} indicatorColor="primary" textColor="primary">
+                <Tabs value={filter} indicatorColor="primary" textColor="primary">
                   {tabs.map(({ label, value, onClick }, index) => (
                     <Tab key={index} label={label} value={value} onClick={onClick} />
                   ))}
                 </Tabs>
               </Grid>
               <Grid item xs={12} md="auto" lg={4}>
-                <div className={classes.search}>
+                {/* <div className={classes.search}>
                   <InputBase
                     placeholder="Search…"
-                    value={searchInputValue}
+                    value={searchValue}
                     onKeyUp={(event: React.KeyboardEvent) => {
                       if (event.key === 'Enter') {
-                        setQueryState({
-                          ...queryState,
-                          searchInput: searchInputValue,
+                        changeQueryState({
+                          search: searchValue,
                         });
                       }
                     }}
@@ -268,43 +351,40 @@ export default function Order(props: any) {
                       color="inherit"
                       aria-label="refresh page"
                       onClick={() =>
-                        setQueryState({
-                          ...queryState,
-                          searchInput: searchInputValue,
+                        changeQueryState({
+                          search: searchValue,
                         })
                       }
                     >
                       <SearchIcon />
                     </IconButton>
                   </div>
-                </div>
+                </div> */}
               </Grid>
             </Grid>
           </Grid>
           <Grid item xs={12}>
-            {!!dataGridRows.length && (
+            {!!rows.length && (
               <Paper elevation={1} style={{ padding: 10 }}>
                 <div style={{ flex: 1 }}>
                   <DataGrid
                     // density="compact"
-                    rowCount={100}
+                    rowCount={rowCount}
                     paginationMode="server"
                     ref={dataGridRef}
                     autoHeight
-                    rows={dataGridRows}
+                    rows={rows}
                     columns={cols}
-                    page={currentPage - 1}
-                    pageSize={rowsPerPage}
+                    page={page - 1}
+                    pageSize={limit}
                     onPageChange={(param: GridPageChangeParams) => {
-                      setQueryState({
-                        ...queryState,
-                        currentPage: param.page + 1,
+                      changeQueryState({
+                        page: param.page + 1,
                       });
                     }}
                     onPageSizeChange={(param: GridPageChangeParams) => {
-                      setQueryState({
-                        ...queryState,
-                        rowsPerPage: param.pageSize,
+                      changeQueryState({
+                        limit: param.pageSize,
                       });
                     }}
                     rowsPerPageOptions={[5, 10, 20]}
@@ -317,19 +397,17 @@ export default function Order(props: any) {
                     open={openActionMenu}
                     onClose={() => setOpenActionMenu(false)}
                   >
-                    {seletedRowValue &&
+                    {selectedRow &&
                       actionMenuItems &&
                       actionMenuItems.map(({ title, onClick, matches }, index) =>
-                        matches.includes(seletedRowValue.status) ? (
+                        matches.includes(selectedRow.status) ? (
                           <MenuItem key={index} onClick={onClick}>
                             {title}
                           </MenuItem>
                         ) : null,
                       )}
                   </Menu>
-                  {openModal && modalOrderDetail && (
-                    <OrderDetailModal open={openModal} setOpen={setOpenModal} detail={modalOrderDetail} />
-                  )}
+                  {openModal && <OrderDetailModal />}
                 </div>
               </Paper>
             )}
